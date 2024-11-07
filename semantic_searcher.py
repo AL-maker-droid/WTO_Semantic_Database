@@ -107,6 +107,68 @@ class SemanticSearcher:
         results.sort(key=lambda x: x['section_similarity'], reverse=True)
         return results[:top_k]
 
+    def expand_query(self, query: str) -> List[str]:
+        """
+        Expand query with semantically related concepts
+        Motivation: Broaden search context without losing core meaning
+        """
+        expanded_queries = [
+            query,
+            # Degrowth-related conceptual expansions
+            f"Sustainable alternatives to {query}",
+            f"Economic implications of {query}",
+            f"Environmental context of {query}",
+            f"Social justice perspectives on {query}"
+        ]
+        
+        # Optional: Use external knowledge graph or thesaurus
+        # This could be integrated with WordNet or specialized trade/ecology ontologies
+        return expanded_queries
+
+    def multi_query_search(self, query: str, top_k: int = 5) -> List[Dict]:
+        """
+        Search using multiple query variations
+        """
+        expanded_queries = self.expand_query(query)
+        comprehensive_results = []
+        
+        for expanded_query in expanded_queries:
+            results = self.search(expanded_query, top_k=2)
+            comprehensive_results.extend(results)
+        
+        # Remove duplicates and sort by relevance
+        unique_results = {
+            result['section_text']: result 
+            for result in comprehensive_results
+        }
+        
+        return sorted(
+            unique_results.values(), 
+            key=lambda x: x['section_similarity'], 
+            reverse=True
+        )[:top_k]
+
+    def advanced_similarity(self, query_embedding, document_embedding):
+        """
+        More nuanced similarity computation
+        """
+        # Cosine similarity with additional weighting
+        cosine_sim = torch.nn.functional.cosine_similarity(
+            query_embedding.unsqueeze(0),
+            document_embedding.unsqueeze(0)
+        )
+        
+        # Incorporate embedding magnitude as a secondary factor
+        magnitude_factor = (
+            torch.norm(query_embedding) * 
+            torch.norm(document_embedding)
+        ) / (query_embedding.shape[0] ** 0.5)
+        
+        # Combine similarity metrics
+        advanced_similarity = float(cosine_sim * magnitude_factor)
+        
+        return advanced_similarity
+
 def print_results(results: List[Dict]):
     """Pretty print the search results"""
     print("\nSearch Results:")
