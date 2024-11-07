@@ -1,7 +1,4 @@
-try:
-    import fitz
-except ImportError:
-    from PyMuPDF import fitz
+import fitz  # PyMuPDF
 from pathlib import Path
 
 def extract_text_from_pdf(pdf_path, output_path):
@@ -45,8 +42,8 @@ def extract_text_from_pdf(pdf_path, output_path):
 if __name__ == "__main__":
     # Setup paths
     current_dir = Path.cwd()
-    pdf_path = current_dir / "Documents" / "LT:UR:A-1A:2 copy.pdf"
-    output_path = current_dir /"LT:UR:A-1A:2_extracted.txt"
+    pdf_path = current_dir / "data" / "raw" / "LT:UR:A-1A:2 copy.pdf"
+    output_path = current_dir / "data" / "processed" / "LT:UR:A-1A:2_extracted.txt"
     
     # Extract text
     extract_text_from_pdf(pdf_path, output_path) 
