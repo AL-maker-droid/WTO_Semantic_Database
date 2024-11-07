@@ -119,6 +119,42 @@ class HierarchicalEmbedder:
             
         return embeddings
 
+    def enrich_embeddings(self, embeddings):
+        """
+        Add contextual metadata to enhance semantic understanding
+        """
+        # Add domain-specific context tags
+        context_tags = {
+            'economic_system': ['trade', 'market', 'policy'],
+            'environmental_context': ['sustainability', 'ecology', 'conservation'],
+            'social_dimensions': ['equity', 'justice', 'community']
+        }
+        
+        def tag_embedding(embedding, text):
+            """Attach contextual tags based on text content"""
+            embedding['context_tags'] = [
+                tag for category, tags in context_tags.items()
+                for tag in tags if tag in text.lower()
+            ]
+            return embedding
+        
+        # Apply tagging recursively
+        def process_hierarchical_embeddings(obj):
+            if isinstance(obj, dict):
+                if 'text' in obj and 'embedding' in obj:
+                    obj = tag_embedding(obj, obj['text'])
+                
+                for key, value in obj.items():
+                    if isinstance(value, (dict, list)):
+                        obj[key] = process_hierarchical_embeddings(value)
+            
+            elif isinstance(obj, list):
+                obj = [process_hierarchical_embeddings(item) for item in obj]
+            
+            return obj
+        
+        return process_hierarchical_embeddings(embeddings)
+
 def save_embeddings(embeddings, output_path):
     """Save embeddings to disk"""
     # Convert embeddings to lists for JSON serialization
@@ -145,7 +181,10 @@ if __name__ == "__main__":
     embedder = HierarchicalEmbedder()
     embeddings = embedder.process_document(text)
     
+    # Enrich embeddings
+    enriched_embeddings = embedder.enrich_embeddings(embeddings)
+    
     # Save embeddings
     output_path = Path("data/processed/hierarchical_embeddings.json")
-    save_embeddings(embeddings, output_path)
+    save_embeddings(enriched_embeddings, output_path)
     print(f"Hierarchical embeddings saved to {output_path}") 
