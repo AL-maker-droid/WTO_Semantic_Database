@@ -1,0 +1,630 @@
+COP\ right © I F.\C COl1trol 01 Di .... tributed Paramet er 
+s\ .... tellh, l.o.., ;\Ilgeie .... , Calilorllia, 19Hti PLE~ARY PAPERS 
+DOMAIN OPTIMIZATION PROBLEMS WITH A 
+BOUNDARY VALUE PROBLEM AS A 
+CONSTRAINT 
+N. Fujii 
+DfPartlllfllt of COlltrol Engineering, Faculty of Engineering Science, Osaka 
+Ullillersity, Toyonaka, Osaka 560, japan 
+Abstract. In this paper, an overview of domain optimization problems is given. The 
+optimization problem in which an objecti ve function depending on a domain through the 
+sol u tion of a boundar y val ue pro blem defined on the domain should be minimized (or 
+maximized) with respect to the domain is called a domain optimization problem . Some 
+examples of the optimization problems are given. For a simple domain optimization 
+problem, the first order and the second order necessary conditions are derived. The 
+existence of, and the numerica l methods for the optimal domain are briefly discussed. 
+Keywords . Domain optimization ; distri bu ted parameter sytem; boundary-value problem ; 
+first & second variation ; existence of the solution . 
+INTRODUCTION 
+The purpose of this paper is to give an overview on 
+"domain optimization problems" from the author's 
+viewpoint . The domain optimizatio n problems have 
+recently drawn interest on some investigato rs who 
+wishes to design the shape of solid substances 
+optimal in some sense. The objective function in 
+these problems depends on the domain through not 
+only the integration but also the solution of a 
+boundary value problem defined on the domain; the 
+optimization problems are, then, thought to be a 
+kind of shape optimization problems. 
+Examples of Domain Optimization Problems 
+We shall give some typical examples of the domain 
+optimization problems. Cea (1981) enumerates many 
+such problems; the reader who is interested can 
+consult his paper. 
+Torsional rigidity , principal frequency. Polya 
+(1948) completely solved the following optimization 
+problems : 
+Problem I (maximum torsional rigidity), minimize 
+where r J 'Vu J2dx 
+J)l --t--------
+{J)l u dx } 2 
+~ has the with respect to ~ £ R2, 
+prescribed area and u 
+solution of the boundary value problem 
+L'.u(x) -2, x £ ~, 
+u(x) 0, x £ a~; 
+problem 2 (minimum principal frequency), 
+J~J'VuJ2dx 
+-J~:2~:--with respect to ~ £ R2, is the 
+(1) 
+(2) 
+minimize 
+where ~ has the prescribed area and u is the 
+solution of 
+L'.u(x) + AU(X) 0, x £ ~, (3) 
+(4) u ( x) = 0, X £ a~ , 
+A being determined together with the 
+first problem is to find the shape minimum . The 
+of the cross 
+5 section of an elastic bar so that the torsion3l 
+rigidity of the bar is maximized. The second one 
+is to determine, for example, the shape of an 
+elastic membrane which has the lowest principal 
+tone. Polya gave the final answers to these 
+problems using the Steiner 's symmetrization in 
+isoperimetric problems; the optimal shapes are 
+circles. Banichuk (1975) investigated the similar 
+problems . 
+~inimum-drag flow. Pironneau (1973, 1974) investi­
+gated the shape design problem of minimum-drag 
+flow. His problem is, for example, as follows: 
+Let ~ be a domain in R3 bounded by two closed 
+sufaces, Sand r, S being contained in rand r 
+being fixed; minimize 
+J 3 aUi aUj 
+1 L (~-~ + ~--)2 dx 
+~2 i,j=loxJ oXi 
+with~respect to S, where ~ has a prescribed 
+and u = (ul, u2, u3) is the solution of 
+~ u 
+... u 'Vp(x) 
+0, 
+... a, ... 0, 'V·u = 0, x £ ~, 
+X £ S, 
+x £ r. area 
+(5) 
+(6) 
+(7) 
+... the Stokes equations with the pressure field p, a 
+being a given velocity field at r. Pironneau gave 
+a first order necessary condition to this problem. 
+Koda (1984) considered the similar problem of 
+non-stationary flow through his sensitivity analy­
+sis. 
+Miscellaneous problem s. From the shape design 
+problem for plasma columns in toroidal devices for 
+thermal nuclear fusion, the present author (1986a) 
+was led to the following problem: Maximize 
+J~g(X'U(X)) dx with respect to ~, 
+where g(x,u) is a given function, ~ must satisfy 
+for a given function h(x) 
+J~h(X) dx = const., 
+and u is the solution of 
++ L'.u(x) -v·'Vu = f(x,u), 
+u = K (const.) x £ ~, 
+x £ a~ , (8) 
+(9) 
+(10) 
+
+(i ". Fujii 
+~(x,u) being an appropriate nonlinear function and 
+being a given vector field. He defined 
+anumbiguously the first variation of the solution, 
+corresponding to domain variations, to the boundary 
+value problem (9), (10). Then he derived the first 
+order necessary condition in two ways of 
+representation. 
+He and his students (Fujii, rchikawa and Kozai, 
+1985) showed an intuitive method for deriving the 
+first order necessary condition as well as the 
+first variation of the solution in the case of 
+objective functions that depend on the gradient of 
+the solution , Vu. 
+Chenais (1975) transformed a domain identification 
+problem with a boundary value problem of second 
+kind into a domain optimization problem such as 
+those described here and showed the existence of 
+the optimal domain introducing a special class of 
+domains . 
+Zolesio (198Ib) investigated a kind of free bound­
+Dry problems tranforming each of them into a domain 
+optimization problem. 
+Problem Statement 
+Main features of the above problems lie on the fact 
+that the objective function must be optimized with 
+respect to the domain on which a boundary value 
+problem is defined; in this regard, our problems 
+are different from other shape optImIzatIon 
+problems in which the domain is fixed (see, for 
+exampLe, Sakawa and Ukai, 1980). In order to 
+simply obtain an outline of the theory, we shall 
+focus on the following simple (or prototype) 
+probl em: 
+Optimization problem . Given a smooth function 
+g(x,u) of x = (XI, x2) E R2 and u E R, minimize 
+J(O;u) defined by 
+r 
+J(O;u) = J g(x,u(x» dx o (I I) 
+with respect to 0 in R2, subject to the subsidiary 
+constraint 
+reo) -J hex) dx = c( const.) , (12) o 
+where u(x) is the solution of the boundary value 
+problem 
+6u(x) -k(x)u(x) = f(x), 
+u(x) = K(const.), x E 0, 
+x E 30. ( 13) 
+(14) 
+Throughout the paper, the given functions h(x)A 
+k(x) ~ 0 and f(x) are assumed to be defined on RL 
+and to be sufficiently smooth for the sake of 
+simplicity. Note that (12) is a generalization of 
+the condition that 0 has a prescribed area. 
+FIRST ORDER NECESSARY CONDITION 
+Definition of Boundary Variation 
+In order to investigate the above Optimization 
+problem, it is natural to consider variations of 
+the preassigned domain O. These domain vriations 
+are incarnated as variations of the boundary of 0, 
+r = 30. Let pes) be a sufficiently smooth function 
+of the arc1ength s introduced on r. He erect at 
+each point on r the normal and plot on it the 
+segment EP(s) s~ that positive Ep(s) lies on the 
+outward normal n = (nI, n2), where E is a pOSitive 
+number. If E is small enough, the end-points of 
+the segments form a closed curve which enclose a 
+new domain; hereafter, the curve will be denoted by 
+rE and the new domain, 0E' He shall call Ep(s) the 
+boundary variation and say that 0E(rE) is obtained from 0.(r) by this variation. 
+First variation of the solution 
+If we try to calculate the first variation of the 
+objective function defined by (11) in accordance 
+with the description of the conventional calculus 
+of variation , we are inclined to know the first 
+variation of the solution to (13), (14). Let u be 
+the solution of E 
+6UE(x) -k(x)uE(x) = f(x), x E 0E' (15) 
+uE(x) = K, x ErE' (16) 
+where r is 30. The solution u is different from 
+u even In theE overlapped partE of the domains , 
+0(\0 . Thus, the following question arises: Does 
+ther~ exist a function ~ so that, roughly speaking , 
+uE(x) -u(x) 
+holds? Here a(E) is a quantity such that E-Ia(E) 
+~ 0 as E ~ O. He call ~ the first variation of the 
+solution . This notion will play a crucial role in 
+calculation of the first variation of objective 
+function J(O;u). 
+For the boundary value problem (9), (10), the 
+present author (1986a) showed the existence of the 
+first variation ~ of the solution . As for the 
+boundary value problem (13), (14), he has shown the 
+following theorem in the coexisting paper (Fujii, 
+1986b) . 
+Theorem I. If we define $E(x) by 
+~ (x) = E-I(U (x) -u(x», E E 
+then there exists a function $ E CI(Q)IlC2(0) such 
+that 
+$, 
+i, j = 1,2, 
+uniformly on every compact subdomain of 0; in other 
+words, 
+Function $(x) is given as the solution of the 
+boundary value problem: 
+6$(x) -k(x)$(x) 0, x E 0, 
+(j)( x) -~~ p(x), x Er. 
+This theorem follows from the well-known maximum 
+principle (Courant, 1962) and Schauder 's interio r 
+estimates (Courant, 1962; Gilbarg and Trudinger, 
+1983). 
+First Order Necessary Condition 
+Along the description of the conventional calculus 
+of variation, we calculate the first variation of 
+the objective function . Observe that J(OE;uE) is 
+given by 
+J(O ;u ) = J g(x,u (x» dx, E E 0 E 
+E 
+where, of course, 0 is obtained from 0 by boundary 
+variation Ep(S) andEu is the solution of (15), 
+(16). If we define the first variation 6(1)J by 
+J(O ;u ) -J(O;u) = E6(1)J + a(E), (19) E E 
+
+Domaill ()ptillli/atioll Problem, 7 
+it is calculated to be 
+6(1)j = Jrg(X,U)P(X) dr + Jrl~(X'U)<D(X) dx, (20) 
+where Theorem I is 
+O(x) from (20), 
+through used. In order to eliminate 
+function p(x) we introduce a 
+d np(x) -k(x)p(x) = ~(x ,u(x» , x £ rl, (21) 
+x Er, (22) p(x) = 0, 
+obtaining 
+( d 
+J rl/u( x, u) <D( x) ( du dp 
+dx = -J rdn dn p( x) d r. 
+Substitution of this relation into (20) yields 
+6(1)j = J r (g(x,u) -~ ~*} P(x) dr. (23) 
+On the other hand, rl£ must satisfy (12). Hence, we 
+have 
+6(1 ) I = J rh (x) P( x) d r = 0, (24) 
+where 6(1)1 is defined in the same manner as 6(I)j. 
+If rl is the optimal domain of Optimization problem , 
+6(I)j must vanish for an arbitrary pes) which 
+satisfies (24). Thus, we arrived at the following 
+theorem (Fujii, 1986b, see also 1986a). 
+Theorem 2. Let rl be an optimal domain and u(x) be 
+the corresponding solution . Then, there exists a 
+constant A such that 
+dp du g(x,u) -an an -Ah(x) = 0, x £ r (25) 
+holds, where p(x) cs the solution of the boundary 
+value problem (21), (22). 
+The similar results are obtained by the present 
+author and his students (Fujii, Ichikawa and 
+Kozai, 1985) for other types of objective functions 
+and subsidiary constraints. 
+Alternative Approaches 
+We shall briefly survey the alternative methods for 
+deriving the first order necessary condition for 
+optimality . 
+Zolesio (1981a) introduced a time varying vector 
+field V(t,x) in Rn to define a mapping Tt(V) in Rn 
+by Tt(V): x + X(t,x), where X(t,x) is the solution 
+of 
+Q... X(t,x) dt 
+X(O,x) V(t,X(t,x», 
+x. 
+Thus, Tt(V) represents a motion of the preassigned 
+domain SI in such a way that each point x in rl is 
+moved to a new point X(t,x). He calculated the 
+derivatives of objective functions with respect to 
+this motion assuming the existence of the first 
+derivatives (these derivatives correspond to our 
+first variation of the solutuion) of the solution 
+to boundary value problems of various types. He 
+called his method the material derivative method. 
+This method is general and sophisticated . It 
+seems, however , to be circumlocutory for our 
+purpose since it is of no use to introduce motions 
+of the interior points of rl. 
+Rousselet (1982, 1983) introduced 
+F(x) to define a mapping x + Q(x) 
+neighbourhood of rl. He calculated 
+of an objective function with 
+mapping and derived the first a vector field 
+= x + F(x) in a 
+the sensitivity 
+respect to this 
+order necessary condition for optimality for vibrating membranes . 
+Koda (1982, 1984) made use of the one parameter 
+family of transformations found in the well-known 
+book by Gelfand and Fomin (Gelfand and Fomin, 1963) 
+to calculate the first variatior. of an objective 
+function introducing adjoint variables ; he assumed 
+tacitly the existence of the first variation of the 
+solution however. He derived the first order 
+necessary condition for the minimal drag shape in 
+non-stationary flow of fluid. 
+In order to derive the first order necessary 
+condition for maximal torsional rigidity of elastic 
+bars, Banichuk (1976) used specialty that the 
+Euler-Lagrange equation for the objective function 
+turns out to be the partial differential equation 
+of the boundary value problem in the constraints . 
+The present author (Fujii, 1985) used conformal 
+mappings to calculate the first variation of an 
+objective function in the case of Neumann problems; 
+this method applies , of course, also to the case of 
+Dirichlet problems . 
+SECOND ORDER NECESSARY CONDITIO~S 
+In order to decrease the number of candidates for, 
+and to resarch features of the optimal domain, it 
+is favorable to derive the second order necessary 
+conditions . To this end, we shall first examine 
+the second variation of the solution to the 
+boundary value problem (13), (14). As far as the 
+author knows, there is no paper except one by the 
+present author (Fujii, 1986b) which deals with the 
+second order necessary conditions together with the 
+second variation of the solution for the domain 
+optimization problems . 
+Let rl be the domain obtained from 
+variaEion £p(s) as in the previous 
+be the coresponding solution of 
+shall call W(x) in rl by boundary 
+section, and u 
+(15), (16). W~ 
+u£(x) -u(x) = £<t>Cx) + £2w(x) + 0(£), x £ rl£rlrl 
+( 26) 
+the second variation of the solution , where <D(x) is 
+the first variation of the solution given in 
+Theorem 1. Let us define wE(x) by 
+w£(x) _ Cl(u£(x) -u(x) -£<I>(x», x £ rl(\rlE. 
+Then, we have 
+Theorem 3. For the sequence {w£}, there exists a 
+function W £ CI(n)(\C2(rl) such that 
+aWE aw a2w d2W 
+WE + W, + E i = 1,2 axi aXi , -axiaxj -axiaxj' 
+uniformly on every compact subdomain of rl. In 
+other words, we have 
+u£(x) -u(x) = E<I>(x) + £2w(x) + 0(£2), x £ rl!lrl£, 
+where 0(£2) is a uniform estimate on every compact 
+subdomain of rl()rl£. The function W(x) is given as 
+the solution of 
+nw(x) -k(x)W(x) 
+w(x) au 
+dn d<l> o -dn 0, x £ rl, (27) 
+x £ r, (28) 
+where u is the solution of (13) and (14), and <I> is 
+given by Theorem I. 
+Thus, the existence of the second variation W(x) of 
+the solution is shown and the characterization of 
+
+8 :\. Fujii 
+\lJ(x) is given. 
+It is possible, from Theorem 3, to calculate the 
+second variation 6(2)j of the objective function 
+defined by 
+£6(I)j + £26(2)j + 0(£2). 
+(29) 
+The result reads 
+6(2)j ; ~ Jr{~ g(x,u) + ~(x,u) ·~ 
+_ ~(x u)dU _ ~~~ ~E ) p2 dr 
+dU ' dn dn2 dil 
+-Jr~ ~~ p dr + ~ J ~~(x,u)<p2 dx, (30) 
+r2dU 
+where R is the radius of the curvature 
+defined to be positive when the curve 
+the domain. On the other hand, r2 
+(12). It follows from this that 
+satisfy 
+0< 2)1 0, at dr and is 
+is concave to 
+must satisfy 
+pes) should 
+(31) 
+where 6(2)1 is defined in the same manner as 6(2)j. 
+If r2 is the optimal domain, 6(2)j given by (30) 
+must be nonnegative for every pes) that satisfies 
+(24) and (31). Hence we have the following second 
+order necessary conditions of Kuhn-Tucker type for 
+optimality . 
+Theorem 4. Let r2 be a domain bounded by a smooth 
+boundary . Necessary conditions that r2 attain a 
+minimum to the optimization problem are that there 
+exists a constant A (Lagrange multiplier) such that 
+dU dP g(x,u) -an an -A hex) ; 0, x £ r (32) 
+holds, and that, for every pes) which satisfies 
+(24), 
+(33) 
+holds, where u(x) is the solution of (13),(14) and 
+~(2)I' the solution of (21), (22), and 6(2)j, 
+u( ) are given by (30), (31), respectively. 
+Once we assume the existence of the second 
+variation of the solution, it is now easy to 
+derive the second order necessary conditions for 
+other types of boundary value problems , objective 
+functions and subsidiary constraints . For more 
+detials, the reader should refer the coexisting 
+paper (Fujii, 1986b). 
+EXISTENCE OF THE OPTIi'IAL DOMAIN 
+It is hopeless to show the existence of an optimal 
+domain itself without imposing any condition on a 
+class of domains in which we seek the optimal 
+domain. Chenais (1975) introduced an important 
+class of domains to prove the existence of an 
+optimal domain in a certain domain optimization 
+problem. The present author (Fujii, 1984) proved 
+some lower-semicontinuity theorems for this class 
+of domains to show the existence of the optimal 
+domain for two kinds of boundary value problems . 
+We shall briefly review these results . 
+Chenais (1975) considered the following domain 
+optimization problem : 
+Let G and D be two bounded domains in Rn, Euclidean 
+n-space, and let a given function f belong to L2(D) and ud be given in L2(G); find r2 (GC QC D) which 
+minimizes j(Q) given by 
+j(Q)" fG(U'G -Ud)2 dx, (34) 
+where ulG is the restriction of u to G, and u is 
+the solution of the boundary value problem 
+6u(x) -u(x) ; f(x), x £ Q, (35) 
+dU 0, x £ dQ, (36) do 
+f(x) being a given function. 
+He sought the optimal domain in the class of 
+domains mentioned above deriving many important and 
+useful properties of this class and proved the 
+existence of the optimal domain; his objective 
+function does not, however, depend on the gradien t 
+of the solution, Vu. For the same class of 
+domains, the present author (Fujii, 1984) derived 
+some lower-semicontinuity theorems for objective 
+functions that depend on the gradient of the 
+solution , Vu. He showed, for example , the follow­
+ing result. 
+Theorem 5. 
+continuous 
+an optimal 
+introduced Let a nonnegative function g(q) be 
+in q £ R2 and convex. Then,there exists 
+domain Q* in the class of domains 
+by Chenais of the optimization problem: 
+Hinimize r g(Vu(x)) dx with respect to Q in the 
+)Q 
+class, where u is the generalized solution of 
+6u(x) -k(x)u(x) ; f(x), x £ Q, 
+dU dii ; 0, x £ dQ 
+and Q must satisfy 
+JQh(X) dx ; c., (14) 
+f(x) being a given smooth function of x £ R2. If 
+Q* is smooth enough, the corresponding solution u* 
+is the classical one; hence, the optimal domain 
+exists in the classical sense. 
+To his regret, however , his result for Dirichlet 
+problem is not complete in the classical sense. 
+In other words, the existence of the optimal domain 
+for Optimization problem is not completely shown. 
+This point should be overcome in the near future. 
+NU~lERICAL HETHODS 
+We can hardly expect analytiC solutions of the 
+domain optimization problems except the special 
+problems such as Polya's problems stated in the 
+first section . Thus, it is desired , from the 
+practical point of view, to develop numerical 
+methods for solutions . 
+Almost all the existing numerical methods (Cea, 
+1981b; Pironneau, 1973; Koda, 1982,1984; Marrocco 
+and Pironneau, 1978) are on the basis of the first 
+variation of the objective function . Since these 
+methods usually require many iterations of solving 
+the boundary value problems , they are not thought 
+to be much efficient . If we shall succede in 
+making use of the second variation , stated above, 
+of the objective function to derive the numerical 
+methods like the Newtonian methods in the 
+conventional mathematical programming, we are able 
+to expect shortening of the computationa l times and 
+the costs. 
+In this case, however, if the problem enjoys 
+symmetry such as symmetry of spatial rotation high 
+and 
+
+Domaill ()plimizal iOIl I'n .h!ems 
+translation, we must add the, so 
+"localization factor", for example 
+a f~(XI2 + X22) dx to speak, 
+to the objective function in order to confirm the 
+convergence of the iteration s required, a being a 
+weight. 
+CONCLUDING RE~IARKS 
+We have given an outline of the theory for the 
+domain optimization problems that have a boundary 
+value problem as a main constraint. For a linear 
+boundary value problem ~ith a Dirichlet condition 
+as an example, the existence of the first and the 
+second variation, corresponding to a boundary 
+variation, of the solution are established; they 
+are shown to be given as solution s of boundary 
+value problems of the same type. From these 
+results, we were able to formulat e the first and 
+the second variations of the objective function. 
+The first order necessary condition derived in this 
+paper is obtained also by other methods, for 
+example, the material derivative method, the senSI­
+tivity analysis, conformal mapping and so on. The 
+second order necessary condition s of Kuhn-Tucker 
+type has recently been derived by the present 
+author. 
+Many problems are left unsolved. We 
+them from the theoretical point 
+example, can enumerate 
+of view: For 
+1 complete existence theory for the optimal 
+domain in the case of Dirichlet Problem; 
+2 sufficient conditions for the optimal domain; 
+3 properties, foreseen from the necessary condi­
+tions, of the optimal diomain; 
+4 analytic solutions of the optimal domain, if 
+possible. 
+From the practical point of view, the efficient 
+numerical methods are desired first of all. 
+For other boundary value problems such as Neumann 
+problems, we can mention that it is easy to derive 
+the first and the second order necessary conditions 
+if we assume the existence of the variations of the 
+solution and if the objective function does not 
+depend on the gradient of the solution. 
+If the investigation, including to settle those 
+problems above, will be brought to succesive 
+degrees of completion , the domain optimization 
+method will find many application fields such as 
+design problems in aeronauti cs. 
+ACKNO\,LEDGt 'IENTS 
+The author wishes to express his sincere thanks to 
+the Organizing and International Program Committees 
+for their invitation to giving this plenary lec­
+ture. He also thanks Professor Y. Sakawa of Osaka 
+University for his recommendation to the above 
+committees and his encouragements. 
+REFERENCES 
+Banichuk, N. V. (1976). Optimization of elastic 
+bars in torsion. Int. J. Solids and Struc­
+tures, 12, 275-286. 
+Cea,~198Ta). Problems of shape optimal design. 
+In E. J. Haug and J. Cea (Eds.). Optimization 
+of Distributed Parameter Structures, vol. 2. Sijthoff and \oordhoff, Alphen aan den Rijn. 
+pp. 1005-104 8. 
+Cea, J. (1981b). ~umerical methods of shape 
+optimal deign. In E. J. Ilaug and J. Cea 
+(Eds.). Optimization of Distributed Parameter 
+Structures, vol. 2. Sijlhoff and ~oordhoff, 
+Alphen aan den :'Ijn. pp. 1049-1087. 
+Chenais, D. (1975). On the existence of a solution 
+in a domain identification problem. J. Math. 
+Anal. Appl., 52, 189-219. 
+Courant, R. (1962). ~~I~e~t~h~ o~d~s~~o~f~~~~la~t~h~ e~m~a~t~i~c~a~1 
+Physics, vol. 2. Interscience Publ ishers, ~:ew 
+York. 
+Fujii, ~. (1984). Lower-semicontinuity in domain 
+optimization problems. Submitted to J. O. T. 
+A. 
+FUjii, ~:. (1985). ~ecessary conditiun s for domain 
+optimization problems via conformal mapping. 
+Submitted to J. O. T. A. 
+Fujii, ~. (19863) . 'Jecessary conditions for a 
+domain optimizat ion problem in elliptic 
+boundary value problems. SIAM J. Control and 
+Optimiz~ti on, 24, :\0. 3 (in press). 
+Fujii, ~. (1986b). Second variation and its 
+application in a domain optimization problem. 
+This preprints. 
+Fujii, ~., Tchikawa, 11. and Kozai, 11. (1985). 
+Domain optimization problems constrained by a 
+bounary value problem . Transaction of the 
+Society of Instrum ent and Control Engineers, 
+21, 800-805 (in Japanese). 
+Gelfari"d, l. n. and Fomin, F. D. (1963). Calculus 
+of Variations. Prentice-Hall, Englewood 
+Cliffs, ~;ew Jersey. 
+Gilbarg, D. and Trudlnger, ~. S. (1983). Elliptic 
+Partial Differential Equations of Second Order, 
+2nd ed. Springer-Verlag, Berlin. 
+~oda, M. (1982). Sensitivity analysis of 
+atmospheric difusion equation. Atmospheric 
+Environment, 16, 2595-2601. 
+:(oda, 11. (1984~ Opt imum design 
+mechanical distributed-parameter 
+Large Scale Systems, ~, 279-292. in fluid 
+systems. 
+tlarrocco, A. and Pironneau, O. (1978). Optimum 
+design with Lagrangian finite elements: Design 
+of an electromagn et. Computer Methods in 
+Applied ~Iechanics and Engineering, 12, 277-308. 
+Pironneau, O. (1973). On optimum profiles in Stokes 
+flow. J. Fluid ~Iechanics, 59, 117-128. 
+?ironneau, O. (1974). On optimum- design in fluid 
+mechanics. J. Fluid Mechanics, 64, 97-110. 
+Polya, G. (1948). Torsional rigidity, principal 
+frequency, electrostatic capacity and symmetri­
+zation. Quarterly Appl. Math., ~, 267-277. 
+Rousselet,3. (1982). Reponse dynamique et 
+optimisation de domaine. In J. P. Babary and 
+L. LeLetty (Eds.). Prepnnts of IFAC 3rd 
+Symposium on Control of Distributed Parameter 
+Systems. rFAC, Toulouse. 
+Rousselet, B. (1983). Shape design sensitivity of 
+a membrane. J. Opt. Theory and Applications, 
+40, 595-623. 
+Sakawa, Y. and Ukai, H. (1980). Optimal shape of 
+an elastic structu re. Optimal Control Appli­
+cations 6 Ilethods, 1, 373-385. 
+Zolesio, J. P. (1981a).-The material derivative (or 
+speed) method for shape optimization. In E. 
+J. Haug and J. Cea (Eds.). Optimization of 
+Distributed Parameter Structure s, vol. 2. 
+Sijthoff and Soordhoff, Alphen aan den Rijn. 
+pp.l089-11 51. 
+Zolesio, J. P. (198Ib). Domain variational formu­
+la t ion for free boundary pro blems. In E. J. 
+Haug and J. Cea (Eds.). Optimization of 
+Distribut ed Parameter Structure s, vol. 2. 
+Sijthoff and Soordhoff, Alphen aan den Rijn. 
+pp. 1152-11 94. 

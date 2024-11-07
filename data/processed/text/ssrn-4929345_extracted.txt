@@ -1,0 +1,1066 @@
+Solving stochastic climate-economy models:
+A deep least-squares Monte Carlo approach
+Aleksandar Arandjelović1, Pavel V. Shevchenko2, Tomoko Matsui3,
+Daisuke Murakami4, Tor A. Myrvoll5
+1Institute for Statistics and Mathematics, Vienna University of Economics and Business, Austria
+2Department of Actuarial Studies and Business Analytics, Macquarie University, Australia
+3Department of Statistical Modeling, Institute of Statistical Mathematics, Japan
+4Department of Statistical Data Science, Institute of Statistical Mathematics, Japan
+5Department of Electronic Systems, Norwegian University of Science and Technology, Norway
+Abstract
+Stochastic versions of recursive integrated climate-economy assessment models are essential for study-
+ing and quantifying policy decisions under uncertainty. However, as the number of stochastic shocks
+increases, solving these models as dynamic programming problems using deterministic grid methods
+becomes computationally infeasible, and simulation-based methods are needed. The least-squares
+Monte Carlo (LSMC) method has become popular for solving optimal stochastic control problems
+in quantitative ﬁnance. In this paper, we extend the application of the LSMC method to stochastic
+climate-economy models. We exemplify this approach using a stochastic version of the DICE model
+with all ﬁve main uncertainties discussed in the literature. To address the complexity and high dimen-
+sionality of these models, we incorporate deep neural network approximations in place of standard
+regression techniques within the LSMC framework. Our results demonstrate that the deep LSMC
+method can be used to eﬃciently derive optimal policies for climate-economy models in the presence
+of uncertainty.
+Keywords: Dynamic integrated climate-economy model •Least-squares Monte Carlo •Climate
+change•Optimal control •Deep learning •Carbon emission •Stochastic DICE model •Uncertainty
+quantiﬁcation
+Date: August 18, 2024
+Corresponding author: pavel.shevchenko@mq.edu.au
+
+
+1 Introduction
+The analysis of climate-economy policies is typically performed using Integrated Assessment Models
+(IAMs) that describe the complex interplay between the climate and the economy via deterministic
+equations. In order to account for stochastic shocks when ﬁnding optimal mitigation policies adapted
+to climate and economic variables that are evolving stochastically over time, a recursive dynamic
+programming implementation of integrated assessment models is required. This is a signiﬁcantly
+harder computational problem to solve compared to the deterministic case. Seminal contributions to
+solving IAMs as optimal decision making problems in the presence of uncertainty include Kelly and
+Kolstad (1999), Kelly and Kolstad (2001), Leach (2007), Traeger (2014), and Cai and Lontzek (2019).
+All these studies are based on variants of the so-called dynamic integrated climate-economy (DICE)
+model extended to include stochastic shocks to the economy and climate. The DICE model is one of
+the three main IAMs (the other two being FUND and PAGE) used by the United States government
+to determine the social cost of carbon; see Interagency Working Group on Social Cost of Greenhouse
+Gases (2016). It has been regularly revised over the last three decades, with the ﬁrst version dating
+back to Nordhaus et al. (1992). It balances parsimony with realism and is well documented with all
+published model equations; in addition, its code is publicly available, which is an exception rather
+than the rule for IAMs. At the same time, it is important to note that IAMs, and the DICE model
+in particular, have signiﬁcant limitations (in the model structure and model parameters), which have
+been criticized and debated in the literature (see the discussions in Ackerman et al. (2009); Pindyck
+(2017); Grubb et al. (2021); Weitzman (2011)). Despite the criticism, the DICE model has become
+the iconic typical reference point for climate-economy modeling, and is used in our study.
+The original deterministic DICE model is solved as a global optimization problem using the General
+Algebraic Modeling Language (GAMS)1, a high-level programming language for mathematical mod-
+eling. Its stochastic extensions mentioned in the above-mentioned studies require implementations of
+recursive dynamic programming to ﬁnd optimal climate policies under uncertainty2. This is subject
+to the curse of dimensionality, and these studies are limited to only one or two stochastic variables.
+Even in this case, computations take several million core hours on a modern supercomputer (see, for
+instance, Cai and Lontzek (2019)). Therefore, simulation methods are needed to handle models with
+many state variables and multiple shocks to reduce the computational burden.
+The least-squares Monte Carlo (LSMC) method for solving multi-dimensional stochastic control prob-
+lems has gained popularity in recent years due to its eﬀectiveness in dealing with high dimensional
+problems and because it imposes fewer restrictions on the constraints and allows for ﬂexibility in the
+dynamics of the underlying stochastic processes. The idea is based on simulating random paths of the
+underlying stochastic variables over time and replacing the conditional expectation of the value func-
+tion in the Bellman backward recursive solution of the stochastic control problem with an empirical
+least-squares regression estimate. The transition density of the underlying process is not even required
+to be known in closed form; one just needs to be able to simulate the underlying processes. The LSMC
+method was originally developed in Longstaﬀ and Schwartz (2001) and Tsitsiklis and Van Roy (2001).
+1https://www.gams.com/
+2If required, the deterministic DICE model can be solved as a recursive dynamic programming problem, too.
+2
+
+
+The convergence properties of this method are examined in Belomestny et al. (2010); Belomestny
+(2011), and Aïd et al. (2014). The LSMC method was originally developed for pricing American
+options where the state variables are not aﬀected by the control. Later, an extension of the LSMC
+method with control randomisation was developed in Kharroubi et al. (2014) to handle endogenous
+state variables (i.e. state variables that are aﬀected by controls). When applied to stochastic control
+problems that aim to optimize an expected utility, some further extensions are needed as proposed in
+Andréasson and Shevchenko (2022) and Andréasson and Shevchenko (2024) to achieve a stable and
+accurate solution.
+In this paper, we demonstrate how the LSMC method can be adapted to solve the recursive dynamic
+programming problem of stochastic IAMs. We exemplify this approach with an application to the
+DICE model with uncertainties in: (1) the equilibrium temperature sensitivity, (2) the damage func-
+tion coeﬃcient, (3) the growth rate of total factor productivity, (4) the growth rate of decarbonization,
+and (5) the equilibrium carbon concentration in the upper strata. These ﬁve uncertainties were iden-
+tiﬁed in Nordhaus (2018) as being major sources of uncertainty for the evolution of climate-economic
+state variables. Typically, polynomial regression is used in LSMC to approximate the corresponding
+conditional expectations with respect to state variables and controls. However, for models such as the
+stochastic DICE model, this leads to the need of too many covariates and simulations, making the
+method not practical. To overcome this problem, we use deep neural network approximations for the
+required regressions and provide detailed explanations.
+The DICE model is a deterministic approach that combines a Ramsey–Cass–Koopmans neoclassical
+model of economic growth (also known as the Ramsey growth model) with a simple climate model.
+It involves six state variables (economic capital; temperature in atmosphere and lower oceans; carbon
+concentration in atmosphere, upper and lower oceans) evolving deterministically in time, two control
+variables (savings and carbon emission reduction rates) to be determined for each time period of the
+model, and several exogenous processes (e.g. population size and technology level). The uncertainty
+about the future of the climate and economy is then typically assessed by treating some model
+parameters as random variables (because we do not know the exact true value of the key parameters)
+using a Monte Carlo analysis (see Nordhaus (2018); Gillingham et al. (2015)).
+Modeling uncertainty owing to the stochastic nature of the state variables (i.e. owing to the process
+uncertainty that is present even if we know the model parameters exactly) requires the development
+and solution of the DICE model as a dynamic model of decision-making under uncertainty, where
+we calculate the optimal policy response under the assumption of continuing uncertainty throughout
+the time frame of the model. Few attempts have been made to extend the DICE model to incorpo-
+rate stochasticity in the underlying state variables and solve it as a recursive dynamic programming
+problem. For example, Kelly and Kolstad (1999) and Leach (2007) formulated the DICE model with
+stochasticity in the temporal evolution of temperature, and solved this as a recursive dynamic pro-
+gramming problem. These studies are seminal contributions to the incorporation of uncertainty in the
+DICE model (although their numerical solution approach is diﬃcult to extend to a higher dimensional
+space and time-frequency). Cai and Lontzek (2019) formulate DICE as a dynamic programming prob-
+lem with a stochastic shock on the economy and climate. In addition, Traeger (2014) developed a
+3
+
+
+reduced DICE model with a smaller number of state variables, whereas Lontzek et al. (2015) studied
+the impact of climate tipping points, and Shevchenko et al. (2022) considered the DICE model with
+discrete stochastic shocks to the economy. To our best knowledge, the only attempt to solve the
+stochastic DICE model using an LSMC-type approach is Ikefuji et al. (2020). Their study handles
+only one uncertainty at a time, and the setup of the regression type Monte Carlo algorithm omits
+the integration for the conditional expectation in the Bellman equation, assuming the randomness
+is known in the transition of state variables (in principle, in this case, the required integration can
+be performed by using deterministic quadrature methods, but this will be subject to the curse of
+dimensionality).
+The primary contributions of our paper are as follows:
+1. Weintroduceaneﬃcientapproachformodelingstochasticclimate-economymodelsbycombining
+the least-squares Monte Carlo method with deep learning techniques. It provides ﬂexibility
+in handling various types of uncertainties, including both parametric and stochastic process
+uncertainties.
+2. We formulate a stochastic version of the DICE model using the sources of uncertainty as iden-
+tiﬁed by Nordhaus (2018). Notably, it does not rely on discretizing the underlying probability
+distributions that is usually performed in Monte-Carlo type analyses for the sake of model
+tractability.
+3. We perform comprehensive numerical experiments and discuss numerical techniques to signiﬁ-
+cantlyreducethecomputationalburdenandaddressseveralpeculiaritiesofthemodel. Moreover,
+wedemonstratehowtoperformuncertaintyquantiﬁcation(UQ)tounderstandhowuncertainties
+in the model propagate and aﬀect outputs (such as projections for the evolution of atmospheric
+temperature).
+The paper is organized as follows. Section 2 gives a description of the considered model. Section 3
+describesthenumericalmethodusedtosolvethemodel. Section4providesacomprehensivenumerical
+study. Section 5 concludes.
+2 Model description
+In this section, we present the DICE-2016R2 model as a classical example of a recursive climate-
+economy model. This version of the DICE model was used in Nordhaus (2018). It includes parameter
+uncertainties in equilibrium temperature sensitivity, the damage function coeﬃcient and the equilib-
+rium carbon concentration in the upper strata, as well as process uncertainties in the growth rate of
+total factor productivity and the growth rate of decarbonization.
+The original deterministic DICE model seeks to ﬁnd policies πthat maximize a social welfare function,
+4
+
+
+which models the discounted sum of population-weighted utility of per capita consumption:
+V= sup
+π∞/summationdisplay
+t=0ρtLtu(ct), (1)
+whereρis a discount factor, Ltis the world population, ctdenotes per capita consumption, and the
+time index t= 0,1,...corresponds to ∆ = 5-year steps. The policy π= (πt)t=0,1,...consists of two
+control variables, per capita consumption ctand a carbon mitigation rate µt. The utility function
+uhas constant elasticity with respect to per capita consumption, u(c) = (u1−α−1)/(1−α), with a
+risk-aversion parameter α≥0(the caseα= 1corresponds to logarithmic utility).
+The model features six state variables: economic capital Kt, the concentration of carbon in the
+atmosphere, the upper oceans, and the lower oceans, Mt= (MAT
+t,MUP
+t,MLO
+t)/latticetop, and the global mean
+temperature of the Earth’s surface and the deep oceans, Tt= (TAT
+t,TLO
+t)/latticetop. The evolution of the
+economic and geophysical sectors is governed by the dynamics described below.
+The economic system: Gross output is modeled by a Cobb–Douglas production function of capital,
+labor, and technology, Yt=AtKγ
+tL1−γ
+t, whereγ∈(0,1)and1−γare the output elasticities of capital
+and labor, respectively. Here, Atdenotestotal factor productivity (see Subsection 2.1), representing
+technological progress and eﬃciency improvements over time.
+The DICE model incorporates economic damages from climate change, represented by a damage
+function that is quadratic in the global mean surface temperature, dt=π2×(TAT
+t)2, whereπ2is
+thedamage coeﬃcient (see Subsection 2.1). These damages can be mitigated by emission reduction,
+controlled by the policy µt. Reducing emissions incurs abatement costs Λt(see Table 1 for their
+speciﬁcation).
+Net output is then given by gross output reduced by damages and abatement costs, Qt= (1−
+Λt)Yt/(1 +dt), and economic capital Ktevolves according to the following dynamics:
+Kt+1= (1−δK)∆Kt+ ∆×(Qt−Ct), (2)
+whereCtis total consumption, and δKis the rate of depreciation of economic capital.
+The carbon cycle: The carbon cycle is modeled by three reservoirs, which follow the dynamics:
+Mt+1= ΦMt+ (∆×βEt,0,0)/latticetop, (3)
+where Φis a coeﬃcient matrix, Etis total CO2emissions (in billions of tons per year), and βis
+the conversion factor of CO2mass into the equivalent mass of carbon. Emissions Etare equal to
+uncontrolled industrial emissions, given by a level of carbon intensity (see Subsection 2.1) σttimes
+gross output, reduced by the emission reduction rate µt, plus exogenous land-use emissions/tildewideEt, i.e.
+Et=σt(1−µt)Yt+/tildewideEt.
+The temperature module: The relationship between greenhouse gas accumulation and increased
+5
+
+
+radiative forcing is described by the function:
+Ft=ηlog2/parenleftbigMAT
+t//tildewiderMAT/parenrightbig+/tildewideFt,
+which models the change in total radiative forcings from anthropogenic sources such as CO2. It
+consists of exogenous forcings/tildewideFtplus forcings due to atmospheric concentrations of CO2. Here,/tildewiderMAT
+is the preindustrial atmospheric carbon concentration. The evolution of global mean temperatures
+follows the dynamics:
+Tt+1= ΨTt+/parenleftbiggψ1Ft+1
+0/parenrightbigg
+, (4)
+where Ψis a coeﬃcient matrix, and ψ1is a model parameter. It is important to note that Ttis
+measured in terms of the absolute increase in temperature relative to the year 1900.
+InDICE-2016R2, µtisassumedtobenon-negativewithanupperboundof1, i.e.nonegativeindustrial
+emissions are allowed. Table 1 summarizes the main coeﬃcients of the model. Note that the number
+of time steps Nis chosen such that t= 0corresponds to the year 2015, while t=Ncorresponds to
+the year 2500.
+The social cost of carbon (SCC): The social cost of carbon (SCC) is a measure of the economic
+harmcausedbyemittingoneadditionaltonofcarbondioxide( CO2)intotheatmosphere. Itrepresents
+the present value of the damages associated with a marginal increase in CO2emissions in a given year.
+The SCC is typically expressed in monetary terms (e.g. dollars per ton of CO2) and is used to help
+policymakers evaluate the beneﬁts of reducing emissions and compare the costs of diﬀerent climate
+policies or regulatory actions aimed at mitigating climate change. The SCC can be calculated in the
+DICE model by:
+SCCt=−1000β∂Vt/∂MAT
+t
+∂Vt/∂Kt, (5)
+whereVtdenotesthevaluefunctionattime t, andβrepresentsthe CO2tocarbonmasstransformation
+coeﬃcient.
+2.1 Modeling uncertainty
+The dynamics presented in the DICE model so far are purely deterministic, assuming precise knowl-
+edge of the future evolution of all exogenous variables for centuries ahead. This approach is an
+unrealistic simpliﬁcation. A reasonable way to address this issue is to introduce probabilistic distribu-
+tions into the model to account for uncertainties about future outcomes. In this paper, we distinguish
+between two types of uncertainties: stochastic process uncertainty, and initial parameter uncertainty.
+Stochastic process uncertainty refers to the uncertainty in the evolution of future trajectories of ex-
+ogenous variables. A classical example from quantitative ﬁnance is Brownian motion, B= (Bt)t≥0,
+modeled by B0= 0andBt+h−Bt∼N(0,h)fort≥0andh≥0, whereN(0,h)denotes the normal
+distribution with expected value 0and variance h. Incorporating stochastic process uncertainties is
+challenging because the uncertainty propagates over time, increasing the volatility of the variable’s
+6
+
+
+Table 1: Parameters for the base model.
+N= 97time steps of ∆ = 5years
+Lt+1=Lt(11.500/Lt)0.134,L0= 7.403(in billions)
+At+1=At/(1−gA(t)),gA(t+ 1) =gA(t) exp(−0.005∆),A(0) = 5.115,gA(0) = 0.076
+σt+1=σtexp(gσ(t)∆),gσ(t+ 1) =gσ(t)(1−0.001)∆,σ0=35.85
+105.5(1−0.03),gσ(0) =−0.0152
+Λt= 550(1−0.025)t/(1000θ2)σtµθ2
+t
+/tildewideEt= 2.6(1−0.115)t,/tildewideFt= (0.5 +t/34)1t<17+1t≥17
+K0= 223,MAT
+0= 851,MUP
+0= 460,MLO
+0= 1740,TAT
+0= 0.85,TLO
+0= 0.0068
+α= 1.45,β= 1/3.666,γ= 0.3,ρ= 0.015,δK= 0.1
+Φ =
+φ11φ120
+φ21φ22φ23
+0φ32φ33
+,Ψ =/parenleftBigg
+1−ψ1ψ2−ψ1ψ3ψ1ψ3
+ψ4 1−ψ4/parenrightBigg
+φ21= 0.12,φ32= 0.007,φ11= 1−φ21,φ12=φ21588/360
+φ22= 1−φ12−φ32,φ23=φ32360/1720,φ33= 1−φ23
+ψ4= 0.025,ψ1= 0.1005,ψ3= 0.088,ψ2= 3.6813/3.1
+η= 3.6813,/tildewiderMAT= 588,π2= 0.00236,θ2= 2.6
+distribution. The LSMC method we present below is highly sensitive to introduced volatility, making
+this incorporation a signiﬁcant challenge that few contributions in the climate-economy literature have
+successfully addressed.
+Initial parameter uncertainty refers to uncertainty about one or more parameters in the system that
+remain ﬁxed over time. A common method to study this uncertainty is a perturbation analysis, where
+parameters are sampled, the model is solved, and the process is repeated. However, this approach
+does not accurately depict the model’s evolution over time, as an agent in the model would consider
+overall outcome uncertainty, not individual instances of the uncertain parameter. Another related
+concept is Bayesian learning (Kelly and Kolstad, 1999), where the parameter distribution evolves over
+time as more information about the system is revealed. This type of uncertainty can be treated by
+the LSMC approach presented in this paper, but we chose not to include this in the current study,
+leaving it for future work.
+Identifying reasonable uncertainties to include in the model is challenging, as some uncertainties
+might be more signiﬁcant than others. Advanced statistical analyses are required to make educated
+assumptions about probability distributions for the climate and economc system. For our paper, we
+incorporate ﬁve uncertainties into the DICE model, as identiﬁed by Nordhaus (2018). These include
+stochastic process uncertainties in the growth rates of total factor productivity Aand the rate of
+decarbonization σ, as well as initial parameter uncertainties in the temperature-sensitivity coeﬃcient,
+the damage coeﬃcient, and the carbon cycle coeﬃcient. We emphasize that our method is not limited
+to these speciﬁc uncertainties, and we now explain our choices in more detail.
+Productivity growth. Assuming a Cobb-Douglas production function, the growth in total factor
+productivity Amodels the growth in output that is not explained by growth in inputs of labor
+and capital used in production. The DICE model assumes Aevolves according to At+1=At/(1−
+gA(t)), wheregA(t)is the deterministic growth rate which is speciﬁed in Table 1. Nordhaus (2018)
+7
+
+
+assumesgA(0)is normally distributed with mean 0.076and standard deviation 0.056. But in this
+case, using the dynamics for the growth rate, we can model gA(t)as normally distributed with mean
+gA(0) exp(−0.005t∆)and standard deviation 0.056 exp(−0.005t∆). In order to remove extreme cases,
+we truncate this distribution at the mean ±two standard deviations. The evolution of Atis shown
+in Figure 1.
+2010 2020 2030 2040 2050 2060 2070 2080 2090 21005.07.510.012.515.017.520.022.525.0 DICE model
+Range of sample paths (1% to 99%)
+10% and 90% quantiles
+25% and 75% quantiles
+Figure 1: Evolution of total factor productivity Aunder the assumption that
+the growth rate gAis uncertain.
+The rate of decarbonization. Uncontrolled industrial CO2emissions are given by a level of
+carbon intensity, σt, times gross output. The DICE model assumes σevolves according to σt+1=
+σtexp(gσ(t)∆), with a deterministic growth rate gσ(t)which is speciﬁed in Table 1. Nordhaus (2018)
+assumesgσ(0)isnormallydistributedwithmean −0.0152andstandarddeviation 0.0032. Wetherefore
+modelgσ(t)as normally distributed with mean gσ(0)(1−0.001)t∆and standard deviation 0.0032(1−
+0.001)t∆, truncating the distribution at the mean ±two standard deviations in order to remove
+extreme cases. The evolution of σtis shown in Figure 2.
+Equilibrium temperature sensitivity (ETS). The equilibrium temperature sensitivity measures
+how much the Earth’s surface will warm in response to a doubling of atmospheric CO2. The DICE
+model assumes the ETS is equal to 3.1◦Cfor an equilibrium CO2doubling. In Table 1, the ETS
+corresponds to the denominator in the deﬁnition of ψ2. Nordhaus (2018) models the ETS as a log-
+normal distribution, exp(X)withX∼N(1.1060,0.26462). We do the same, truncating at the mean
+±two standard deviations.
+The damage function. TheDICEmodelassumesclimate-inducedeconomicdamagesareaquadratic
+function of the increase in atmospheric temperature. It is modeled as a fractional loss of global output
+from greenhouse warming, d(t) =π2×(TAT
+t)2, whereπ2denotes a damage coeﬃcient representing
+the severity of the economic impact of global warming. The DICE model assumes π2to be equal to
+0.00236. Nordhaus (2018) models the π2by a normal distribution with mean 0.00236 and standard
+8
+
+
+2010 2020 2030 2040 2050 2060 2070 2080 2090 21000.100.150.200.250.300.35 DICE model
+Range of sample paths (1% to 99%)
+10% and 90% quantiles
+25% and 75% quantilesFigure 2: Evolution of carbon intensity σunder the assumption that the growth
+rategσis uncertain.
+deviation 0.00118. We use the same distribution but truncate it at the mean minus one standard
+deviation, and at the mean plus two standard deviations.
+The carbon cycle. The carbon cycle coeﬃcient models the equilibrium concentration of carbon
+in the biosphere and upper level of the oceans. The DICE model assumes it to be equal to 360
+gigatonnes of carbon (GtC). In Table 1, it corresponds to the value 360 appearing in the deﬁnitions
+ofφ12andφ23. Nordhaus (2018) models this coeﬃcient as a log-normal distribution, exp(X)with
+X∼N(5.8510,0.26492)We do the same, truncating at the mean ±two standard deviations.
+2 3 4 5 0.002 0.003 0.004 200 300 400 500 600Median 10% and 90% quantiles 25% and 75% quantiles
+Figure 3: Density plots of the parameter distributions of equilibrium temperature sensitiv-
+ity (left panel), the damage coeﬃcient (middle panel), and carbon cycle coeﬃcient (right
+panel).
+Remark 2.1.
+•Another type of uncertainty is parametric uncertainty , where the value of a coeﬃcient can
+change over time as it is re-drawn at each point in time. This type of uncertainty lies between
+the stochastic process and the initial parameter uncertainty. Although we did not include it in
+9
+
+
+our study, it is straightforward to incorporate and solve using our method.
+•Assumingπ2∼N (0.00236,0.001182)implies a roughly 2.3%probability of π2being negative.
+This is a non-negligible scenario. Given that the DICE model aims to combine equations for the
+economy and climate, it is highly questionable to assume the damage coeﬃcient could be below
+or just above zero. Moreover, the assumption of a log-normal distribution for the equilibrium
+temperature sensitivity and the carbon cycle coeﬃcient also entails a non-negligible probability
+of those coeﬃcients being close to zero.
+Nordhaus(2018)avoidsthisissuebydiscretizingthedistributions,separatingthemintoquintiles,
+and then calculating the expected values of the random variables within those quintiles. These
+expected values are taken as realizations of discrete uncertain variables, yielding suﬃciently
+positive lowest realizations for the coeﬃcients. Inspired by this approach, we also truncate the
+distributions of the random variables, however, without discretizing them. This avoids issues
+with too low damage coeﬃcients and temperature sensitivities, as well as extreme growth rates
+for total factor productivity and carbon intensity.
+3 The deep least-squares Monte Carlo method
+The numerical solution of the model is achieved using the endogenous state least-squares Monte Carlo
+(LSMC) algorithm with control randomization, as introduced by Kharroubi et al. (2014) and adapted
+for expected utility optimal stochastic control problems by Andréasson and Shevchenko (2022). This
+method approximates the conditional expectation of the value function in the Bellman equation
+using regression with a quadratic loss function applied to the transformed value function. Typically,
+regression basis functions are ordinary polynomials of the state and control variables, usually up to
+the third order. In our implementation, we use deep neural networks to approximate the regression
+predictor. To mitigate transformation bias in the regression estimate of the conditional expectation,
+we employ the smearing estimate as proposed by Andréasson and Shevchenko (2022). Below is a brief
+description of the LSMC algorithm.
+Lett= 0,1,...,Ncorrespond to time points in the interval [0,T]. Consider the standard discrete
+dynamic programming problem with the objective to maximize the expected value of the utility-based
+total reward function
+V0(x) = sup
+πE/bracketleftbiggN−1/summationdisplay
+t=0ρtRt(Xt,πt) +ρNRN(XN)/vextendsingle/vextendsingle/vextendsingle/vextendsingleX0=x;π/bracketrightbigg
+, (6)
+whereπ= (πt)t=0,1,...,N−1is a control, X= (Xt)t=0,1,...,Nis a controlled state variable, RNandRtare
+reward functions, ρis a time discount factor, and the expectation is conditional on the initial state
+X0=xand following the policy π. The evolution of the state variable is speciﬁed by a transition
+functionTt(·)such that
+Xt+1=Tt(Xt,πt,Zt), (7)
+whereZ0,Z1,...,ZN−1areindependentdisturbanceterms, i.e.thestateofthenextperioddependson
+10
+
+
+the current state’s value, the current period’s control decision, and the realisation of the disturbance
+term.
+This problem can be solved using the backward recursion of the Bellman equation, starting from
+VN(x) =RN(x)and then solving recursively:
+Vt(x) = sup
+πt∈At/braceleftbigg
+Rt(x,πt) +E/bracketleftbigρVt+1(Xt+1)/vextendsingle/vextendsingleXt=x;πt/bracketrightbig/bracerightbigg
+, t=N−1,N−2,..., 0,(8)
+wheretheexpectationisconditionalonthestate Xt=xandthepolicy πtattimet. Forfurtherdetails
+on dynamic programming, we refer the interested reader to the excellent monograph by Fleming and
+Soner (2006) on the subject.
+Using Equation (8), the optimal control can be found by solving:
+π∗
+t(x) = arg sup
+πt∈At/braceleftbigg
+Rt(x,πt) +E/bracketleftbigρVt+1(Xt+1)/vextendsingle/vextendsingleXt=x;πt/bracketrightbig/bracerightbigg
+. (9)
+Here,Atdenotes a set of admissible values of πt, which may depend on x. When the number of
+state variables is more than three, it usually becomes computationally infeasible to use quadrature-
+based methods to evaluate the conditional expectation in (8), making simulation methods like LSMC
+preferable.
+The LSMC method approximates the conditional expectation in equation (8):
+Φt(Xt,πt) =E/bracketleftbigρVt+1(Xt+1)/vextendsingle/vextendsingleXt;πt/bracketrightbig(10)
+using a regression scheme with the states Xtand randomized policies πtas independent variables,
+andρVt+1(Xt+1)as the response variable. The approximation function is denoted/hatwideΦt. The method is
+implemented in two stages:
+1.Forward simulation: Fort= 0,1,...,N−1, the random state, control, disturbance variables
+as well as the transitioned state are simulated as Xm
+t,πm
+t,Zm
+t, and/tildewideXm
+t+1=Tt(Xm
+t,πm
+t,Zm
+t),
+m= 1,2,...,M, whereπtis sampled independently from Xt.
+2.Backward recursion: Starting from the boundary condition VN(x) =RN(x), the optimal
+stochastic control problem in Equation (6) is solved using the recursion in Equation (8), as
+detailed in Algorithm 1.
+3.1 Transformation bias and heteroskedasticity
+To mitigate challenges in approximating the value function due to the extreme curvature of utility
+functions, one can introduce a transformation H(x)that mirrors the shape of the value function. In
+our implementation, we use:
+H(x) =1
+1−αex(1−α). (11)
+11
+
+
+At each time t<T, the transformed value function is approximated using the least-squares regression:
+H−1(ρVt+1(Xm
+t+1)) = fθ(Xm
+t,πm
+t) +/epsilon1m
+t, m = 1,2,...,M, (12)
+where/epsilon1m
+t,m= 1,2,...,Mare zero mean and independent error terms, {fθ:θ∈Θt}is a parametrized
+family of predictor functions, and H−1the inverse of the transformation function. Then,
+Φt(Xt,πt) =/integraldisplay
+H/parenleftbigfθ(Xt,πt) +y/parenrightbigdFt(y), (13)
+whereFtis the distribution of the error term /epsilon1t.
+In the absence of a closed-form solution for the integral in Equation (13), the empirical distribution
+of the residuals:
+/hatwide/epsilon1m
+t=H−1(ρVt+1(Xm
+t+1))−fθ(Xm
+t,πm
+t) (14)
+can be used to approximate this integral. Consequently, the estimate of Φt(Xt,πt)becomes:
+ˆΦt(Xt,πt) =1
+MM/summationdisplay
+m=1H/parenleftbigfθ(Xt,πt) +/hatwide/epsilon1m
+t/parenrightbig. (15)
+For the chosen transformation H(x)in (11), Equation (15) simpliﬁes to:
+ˆΦt(Xt,πt) =H/parenleftbigfθ(Xt,πt)/parenrightbig1
+MM/summationdisplay
+m=1e/hatwide/epsilon1m
+t(1−α). (16)
+In Equation (16), the mean of the transformed residuals does not depend on (Xt,πt), simplifying the
+function evaluation of ˆΦt(Xt,πt), as the mean can be precomputed and reused.
+If heteroskedasticity is present in the regression with respect to the state and control variables, a
+method that accounts for heteroskedasticity is required. In this case, the conditional variance can be
+modelled as a function of covariates:
+var/parenleftbig/epsilon1t|Xt;πt/parenrightbig=gθ(Xt,πt), (17)
+where{gθ:θ∈/hatwideΘt}is another parametrized family of predictor functions. There are various standard
+methods to estimate gθand thesmearing estimate with controlled heteroskedasticity can then be used
+as discussed in Andréasson and Shevchenko (2022).
+Remark 3.1.
+•The method presented in Algorithm 1 is called the regression surface approach . A common
+alternative is the realized value approach , where the value function Vt(x)in Equation (8) is not
+computed by using the approximation of the conditional expectation (which was needed to ﬁnd
+the optimal policy according to Equation (9)), but rather by computing the discounted sum
+of rewards along one trajectory starting from the state xat timet. While promising greater
+numerical stability than the regression surface approach, the realized value approach requires
+calculating optimal decisions along the individual trajectories, which comes at a signiﬁcant
+12
+
+
+computational cost. For details on this approach, we refer to Andréasson and Shevchenko (2022)
+and references therein. Originally, we also implemented the realized value approach, however,
+we found that the regression surface approach provided a suﬃciently accurate solution for the
+number of sample points chosen in our numerical study in Section 4.
+•Another approach worth mentioning is the regress later LSMC method. Here, the value function
+is approximated directly rather than the conditional expectation: Vt+1(x)≈fθ(x). Finding the
+optimal policy in (9) then requires the explicit calculation of the conditional expectation:
+E/bracketleftbigfθ(Xt+1)/vextendsingle/vextendsingleXt=x;πt/bracketrightbig
+either analytically or numerically with quadrature methods. However, as mentioned earlier,
+this approach becomes infeasible in the case of many simultaneous shocks due to the high
+dimensionality of the required integration.
+3.2 Neural networks
+In our paper, we choose for the parametrized family of functions {fθ:θ∈Θ}the class of deep neural
+networks. This algorithmically generated class of functions has found tremendous success in all ﬁelds
+of science. Over the years, it has been shown that neural networks can act as surrogate functions in
+many models, due to their far reaching approximation capabilities.
+Theorems that establish approximations are referred to as universal approximation theorems (UAT);
+notable contributions include Cybenko (1989) and Hornik (1991). These theorems establish the
+topologicaldensityof setsof neural networks in varioustopologicalspaces. Onespeaks of theuniversal
+approximation property (Kratsios, 2021) of a class of neural networks. Unfortunately, these theorems
+are usually non-constructive. To numerically ﬁnd optimal neural networks, one typically combines
+backpropagation (see, for example, Rumelhart et al. (1986)) with ideas from stochastic approximation
+(Robbins and Monro, 1951; Kiefer and Wolfowitz, 1952; Dvoretzky, 1956).
+Assuming suﬃcient integrability, the conditional expectation in Equation (10) is the orthogonal pro-
+jection ofρVt+1(Xt+1)onto the subspace spanned by (Xt,πt)in the space of square-integrable random
+variables. The universal approximation property of neural networks in this space (see, for instance,
+Hornik (1991, Theorem 1)) then justiﬁes the approximation of Φt(Xt,πt)byfθ(Xt,πt)for a suitably
+chosen neural network fθ.
+3.3 Uncertainty quantiﬁcation
+Uncertainty quantiﬁcation (UQ) is a research ﬁeld focused on understanding how uncertainties in
+model inputs, parameters, and other factors propagate through models to aﬀect their outputs. This
+understanding is crucial for making informed decisions based on model predictions, particularly in
+complex systems where such decisions can have signiﬁcant consequences. A key tool in UQ are
+Sobol’ indices (Sobol’, 2001), which are quantitative measures used in sensitivity analysis to apportion
+13
+
+
+Algorithm 1 LSMC (regression surface)
+[Forward simulation]
+1:fort= 0toN−1do
+2:form= 1toMdo
+3: sampleXm
+tin the domain of its possible values ⊿State
+4: sampleπm
+tin the domain of its possible values At ⊿Control
+5: sampleZm
+tfrom the distribution speciﬁed by the model ⊿Disturbance
+6: Compute/tildewiderXm
+t+1:=Tt(Xm
+t,πm
+t,Zm
+t) ⊿Evolution of state
+7:end for
+8:end for
+[Backward recursion]
+1:fort=Nto0do
+2:ift=Nthen
+3:/hatwideVt(/tildewiderXt):=RN(/tildewiderXt)
+4:else
+[Regression of transformed value function]
+5:/hatwideθt:= arg minθ∈Θt/summationtextM
+m=1/bracketleftBig
+fθ(Xm
+t,πm
+t)−H−1(ρ/hatwideVt+1(/tildewiderXm
+t+1))/bracketrightBig2
+Approximate conditional expectation/hatwideΦt(Xt,πt)using Equation (15)
+6:form= 1toMdo
+[Find optimal control]
+7: π∗
+t(/tildewiderXm
+t):= arg supπt∈At/braceleftBig
+Rt(/tildewiderXm
+t,πt) +/hatwideΦt(/tildewiderXm
+t,πt)/bracerightBig
+[Update value function]
+8:/hatwideVt(/tildewiderXm
+t):=Rt(/tildewiderXm
+t,π∗
+t(/tildewiderXm
+t)) +/hatwideΦt(/tildewiderXm
+t,π∗
+t(/tildewiderXm
+t))
+9:end for
+10:end if
+11:end for
+the variance of a model output to diﬀerent input variables or combinations of input variables. By
+identifying the most important input variables and their interactions, Sobol’ indices guide eﬀorts to
+sort out the main factors which should be studied with care in complex models.
+Sobol’ indices provide a comprehensive view of how input variables and their interactions inﬂuence
+model outputs. They can be applied to any type of model, regardless of its complexity or the nature
+of its inputs and outputs. They are particularly valuable because they capture the eﬀects of nonlinear
+interactions among input variables, which is critical for understanding complex systems. However,
+calculating Sobol’ indices requires a large number of model evaluations, which can be computationally
+expensive for complex models. The accurate estimation of Sobol’ indices also depends on eﬃcient and
+adequate sampling of the input space.
+Denote our stochastic DICE model by G, which maps model inputs X(such as the temperature-
+sensitivity coeﬃcient) to model outputs Y=G(X)(such as the projection of the global mean surface
+temperature in the year 2100). There are two main types of Sobol’ indices.
+First-order Sobol’ indices Si:These indices represent the contribution of a single input variable
+14
+
+
+Xito the output variance V(Y), ignoring interaction eﬀects with other variables:
+Si=VXi(EX∼i[Y|Xi])
+V(Y),
+where EX∼i[Y|Xi]denotes the conditional expectation of YgivenXiwith respect to all inputs X
+except forXi, andVXi(·)denotes the variance with respect to Xi.
+Total-order Sobol’ indices STi:These indices represent the contribution of an input variable to
+the output variance, including all interactions with other variables. They are deﬁned as:
+STi= 1−VX∼i(EXi[Y|X∼i])
+V(Y),
+where EXi[Y|X∼i]denotes the conditional expectation of Ywith respect to Xigiven all inputs X
+except forXi, andVX∼i(·)denotes the variance with respect to all inputs Xexcept forXi.
+First- and total-order Sobol’ indices help determine which input variables are the most inﬂuential.
+Variables with high ﬁrst-order indices have a strong direct eﬀect, while those with high total-order
+indices are signiﬁcant due to their interactions with other variables. In Section 4, we will compute
+Sobol’ indices for our ﬁve identiﬁed uncertainties and examine their eﬀect on the most important
+model parameters. It is important to note that computing Sobol’ indices in conjunction with the
+LSMC method involves solving the model with the backwards recursion (8) only once, and then
+generating a suﬃciently large amount of forward trajectories to estimate the indices SiandSTi.
+3.4 Comparison with other methods
+Jensen and Traeger (2014) analyze long-term economic growth uncertainty in a DICE based assess-
+ment model with an inﬁnite-horizon. They express uncertainty in terms of stochastic shocks to the
+growth rate of total factor productivity. The value function is approximated by Chebyshev polyno-
+mials, and the system is solved by value function iteration. The base model has only 3 physical state
+variables: capital Kt, atmospheric carbon Mt, and technology level At.
+Nordhaus (2018) considers the same DICE model version as the one used in this paper. Five uncer-
+tainties are identiﬁed, the same as those explained in Subsection 2.1. These uncertainties are treated
+as initial parameter uncertainties. The distributions are discretized to reduce the computational bur-
+den, thereby reducing the number of possible scenarios from an uncountably inﬁnite amount to just
+a few thousands. A Monte-Carlo based parameter perturbation analysis is performed, where param-
+eters are sampled, and then the corresponding deterministic version of the DICE model is solved. In
+contrast to Nordhaus (2018), we don’t need to discretize the distributions, and we need to solve the
+model only once.
+Caiand Lontzek(2019) alsostudy astochastic versionof theDICEmodel, extending thedeterministic
+6-dimensional model to a stochastic 9-dimensional model. Two additional model dimensions are due
+to uncertainty in the evolution of total factor productivity, and one additional dimension is due
+to a stochastic tipping point process. The stochastic processes are discretized, and the resulting
+15
+
+
+model is solved by value function iteration, where the value function is approximated by Chebychev
+polynomials. ThemodelissolvedwiththeBlueWaterssupercomputer, using110,688coresinparallel,
+with computation times of up to 8 hours. While we do not include a tipping point process in this
+paper, our simulation based method drastically reduces the computational burden by solving our 11-
+dimensional (in contrast to the 9-dimensional version of Cai and Lontzek (2019)) model formulation
+on a 64 core machine within around 18 hours of computation time, depending on the amount of
+numerical precision that is required for the solutions. Expressed in terms of pure core hours (i.e.
+number of cores multiplied by total computing time), this amounts to a reduction in computing time
+of more than 99%.
+Ikefuji et al. (2020) formulate a stochastic version of the DICE model considering one uncertainty at
+a time: a) uncertainty in the damage-abatement fraction, b) uncertainty in the damage parameter,
+c) uncertainty in the emissions-to-output ratio, and d) uncertainty in total factor productivity At.
+These uncertainties are introduced by multiplying the corresponding deterministic DICE variables
+by stochastic disturbances. Thus, the number of state variables is the same as in the deterministic
+DICE (6). To the best of our knowledge, this is the only attempt to solve a stochastic version of the
+DICE model by using an LSMC type approach. They use least-squares regression with polynomial
+basis functions to approximate the value function, i.e. in the spirit of regress later LSMC. Here, we
+note that their regression type Monte Carlo algorithm setup omits the integration for the conditional
+expectation in the Bellman equation, assuming the random disturbance is known in the transition of
+state variables. In principle, the standard regress later LSMC can be implemented here to handle this
+type of uncertainty but it will be a subject of the curse of dimensionality in the case of more than one
+shock.
+Friedl et al. (2023) present a method for solving integrated assessment models and performing uncer-
+tainty quantiﬁcation. They exemplify their approach on a version of the DICE model with uncertain-
+ties in equilibrium temperature sensitivity (that contains a Bayesian learning component), and the
+damage function (represented by a stochastic tipping process). First, a deep neural network is trained
+to output, in particular, the optimal policies and value function at a given point in time, and then a
+Gaussian process-based model is trained to approximate quantities of interest such as the social cost
+of carbon in order to speed up the evaluation when calculating UQ metrics. In contrast to Friedl et al.
+(2023), our method approximates the conditional expectation rather than the policy functions, and
+then ﬁnds those by running an optimizer to solve Equation (9). Approximating µtby a regression
+scheme is a challenging task, since the presence of the bounds (i.e. 0≤µt≤1) require a very careful
+choice of an appropriate regression scheme that can eﬀectively interpolate the optimal policy, espe-
+cially in the presence of extended periods when the policy is on the boundary. Our approach avoids
+this issue by ﬁnding the optimal policy through an optimizer which, once the conditional expectation
+has been approximated, can be performed with a high degree of numerical precision and speed. More-
+over, the deep LSMC method requires performing a least-squares regression, where the loss function is
+the squared distance between the object of interest and the neural network prediction. This choice of
+loss function is signiﬁcantly simpler, as it avoids the eleven individual components that enter the loss
+function based on an elaborate set of ﬁrst-order conditions that are needed in the solution of Friedl
+16
+
+
+et al. (2023). Finally, in contrast to Friedl et al. (2023), we ﬁnd that there is no need to train an
+additional Gaussian process-based surrogate model to perform UQ for the quantities of interest (such
+as the social cost of carbon). Once the backward recursion (Equation (8)) has been performed, a
+large amount of optimal trajectories for diﬀerent realizations of uncertainties can be computed easily
+in order to perform UQ for the quantities of interest.
+4 Numerical study
+In this section, we present the numerical results from applying the least-squares Monte Carlo method
+with transformation bias adjustment and neural network approximation of conditional expectations.
+For clarity, we emphazise that our state vector Xtconsists of 11 variables: the six variables from the
+deterministic formulation of the DICE model ( Kt,Mt,Tt), the two stochastic processes Atandσt, as
+well as the three parameters discussed in Subsection 2.1 (temperature-sensitivity coeﬃcient, damage
+coeﬃcient and carbon cycle coeﬃcient).
+For the backward recursion and least-squares approximation of the value function, we use 223sample
+points in the 11-dimensional state space. Figure 6 is based on 5×105forward trajectories, while
+the statistics reported in Table 2 are based on a sample of size 106. To ﬁnd the optimal policies in
+(9), we use the limited-memory Broyden–Fletcher–Goldfarb–Shanno algorithm with box constraints
+(L-BFGS-B). On a 64 core machine, it took between 9 hours (for 222samples) and 18 hours (for 223
+samples) to perform the backward recursion. Computing optimal forward trajectories then typically
+took around 15 minutes for 105trajectories, and 1 hour for 5×105trajectories.
+The initial year for the version of DICE model used in Nordhaus (2018) is 2015, not 2020. For
+illustration purposes, during calculation of the optimal forward trajectories, we made the ﬁrst policy
+decision (c0,µ0)deterministic and equal to the optimal decision in the deterministic version of the
+model. This amounts to starting the forward trajectories in the year 2020 with initial values that
+correspond to the optimal deterministic DICE states identiﬁed in Nordhaus (2018). Moreover, the
+original DICE model is formulated as an inﬁnite-horizon control problem, see Equation (1). However,
+our formulation of the LSMC method as discussed in Section 3 assumes a ﬁnite time horizon with N
+time steps ( N= 97in our case corresponding to t= 0being the year 2015, and t=Nbeing the year
+2500). Imposing a ﬁnite time horizon corresponds to a truncation of the problem, and one needs to
+choose an appropriate boundary reward function RN(x). Similarly, as in Cai and Lontzek (2019), our
+terminal reward function is computed by assuming that after 2500 the policies are ﬁxed to µt= 1,
+ct= 0.78, and that the system evolves deterministically. The reward is then equal to the discounted
+sum of population-weighted utility of per-capita consumption from following the ﬁxed policies for
+another 100 time steps. Due to discounting and the large amount of time steps, it is assumed that a
+diﬀerent choice of boundary reward that far ahead in the future should have a negligible impact on
+results for the twenty-ﬁrst century.
+Forapproximatingconditionalexpectations, weusedeepfeedforwardneuralnetworkswithtwohidden
+layers, each containing 32 hidden nodes with hyperbolic tangent (tanh) as activation function, and a
+17
+
+
+linear readout in the output layer. Neural network training is performed using minibatch stochastic
+gradient descent with the Adam optimizer. The initial learning rate is set to 10−3and reduced to a
+minimum of 10−5during training. Early stopping is implemented to avoid overﬁtting. During the
+backward recursion, the trained neural network from one step (e.g. step t+ 1) is used as the initial
+neural network for the next step’s training (step t), which reduces computation time.
+For this version of the stochastic DICE model, the transition equation (7) can be separated into two
+transitions:
+Xt+1=/tildewideTt(F(Xt,πt),Zt), (18)
+where the deterministic transition to the post-decision variable ˆXt=F(Xt,πt)precedes the transition
+Xt+1=/tildewideTt(ˆXt,Zt). This allows the conditional expectation in (8) to be simpliﬁed to:
+E/bracketleftbigρVt+1(Xt+1)/vextendsingle/vextendsingleXt;πt/bracketrightbig=E/bracketleftbigρVt+1(Xt+1)/vextendsingle/vextendsingleˆXt/bracketrightbig.
+This method oﬀers two main advantages: (1) dimension reduction in the covariates needed for the
+least-squares approximation of the conditional expectation, and (2) an increase in sampling eﬃciency
+by sampling only the post-decision states ˆXtrather than both Xtandπt. Our method beneﬁts
+signiﬁcantly from using post-decision variables, and we found a notable improvement in numerical
+precision.
+Economic capital Ktand total factor productivity Atcan grow quite rapidly over time, especially
+in scenarios where large growth in Atmeets a low consumption rate ct. This poses an important
+numerical challenge, since an appropriate domain for sampling the state variables needs to be chosen
+with care. A popular solution to this issue, having been applied successfully in Jensen and Traeger
+(2014), is to normalize economic capital as follows. First, we re-write output to express it in terms of
+labor-augmentingtechnology: Yt=AtKγ
+tL1−γ
+t=Kγ
+t(/tildewideAtLt)1−γ, where/tildewideAt=A1/(1−γ)
+t. Let/tildewideAdet
+tdenote
+the deterministic trajectory of/tildewideAt, wheregA(t)is ﬁxed to be equal to the expected value. Economic
+capital and output are then expressed in terms of units of eﬀective labor: kt=Kt/(/tildewideAdet
+tLt), and
+yt=Yt/(/tildewideAdet
+tLt). The state variable Atcan also be substituted by/tildewideAtand further normalized to
+at=/tildewideAt//tildewideAdet
+t. In our simulations, we found that these normalization steps had a favorable impact on
+the precision of the numerical results.
+Calculating the social cost of carbon (5) requires knowledge of partial derivatives of the value function
+with respect to atmospheric carbon concentration and economic capital. Since we do not have an
+analytic representation of the value function, we follow an approximation approach that was discussed
+in Traeger (2014), where Chebychev polynomials were used to approximate the value function. At
+each timet, we approximate the value function Vtby a neural network:
+Vt(x)≈gθ(x), (19)
+for a suitable parameter vector θ. This approach strikes a balance between numerical precision
+and analytical tractability, applicable even in the presence of stochasticity. Note that the idea of
+approximating the value function by a neural network has already been carried out in Kelly and
+18
+
+
+Kolstad (2001) where, however, the neural network approximation was not used for computing the
+social cost of carbon.
+The post-decision variables ˆXt, representing the states Xtafter decision πt, have the same dimension
+asXt. The sampling step in Algorithm 1 requires choosing an eﬀective sampling distribution. One
+standard approach would be to put a high-dimensional grid of uniformly drawn points around the
+deterministic DICE solution. However, in order to improve numerical precision, low-discrepancy grids
+are favourable in order to keep the number of sample points needed to a reasonable amount. Latin
+hypercubesamplingoﬀersamorefavourabledistributionofgridpointscomparedtouniformsampling.
+WechosetouseSobol’gridpoints(Sobol’,1967), whichoﬀerevenhighernumericalprecisioncompared
+to Latin hypercube samples. Figure 4 shows the point distribution of a uniform and of a Sobol’ grid
+for comparison. We found that using a low-discrepancy grid improved the numerical precision of the
+results.
+0.0 0.2 0.4 0.6 0.8 1.00.00.20.40.60.81.0
+0.0 0.2 0.4 0.6 0.8 1.00.00.20.40.60.81.0
+Figure 4: Comparison of uniform grid (left panel) and low-discrepancy Sobol
+grid (right panel). In both cases, 1024 points were drawn in 11 dimensions. The
+plots depict the point distributions from the 11-dimensional grid projected on
+the ﬁrst two components.
+A major challenge in solving the model was to obtain stable estimates of the optimal emission mit-
+igation rate µt. Estimating the optimal consumption rate ctwas straightforward, but estimating µt
+required very precise estimates in the least-squares approximation of the conditional expectation. Fig-
+ure 5 oﬀers a partial explanation. It illustrates a typical optimization surface when trying to ﬁnd the
+optimal policies (ct,µt)in Equation (9), showing a steep curvature for ctand a much ﬂatter surface
+forµt, indicating the need for precise numerical approximations and small tolerance values in the
+optimizer. We see this issue as a consequence of the model setup. For example, a low carbon intensity
+σtfor times after 2100leads to low emissions and mitigation costs, resulting in an almost negligible
+eﬀect of the mitigation rate on the value Vt. In order to resolve this issue, very precise numerical
+approximations of conditional expectations based on a large number of well-spaced sample points as
+well as small tolerance values in the optimizer for (ct,µt)were required.
+Each point xin the state space can be optimized independently in Equation (9). In other words,
+when solving (9) over a high-dimensional grid in state space, the individual optimization steps for
+each grid point can be executed in parallel. This parallel optimization is implemented using Python’s
+multiprocessing package over 64 cores, signiﬁcantly reducing computation time and allowing for
+the usage of a reasonably large sample size without excessive computational costs.
+19
+
+
+MIU0.90
+0.92
+0.94
+0.96
+0.98
+1.00 CON0.650.700.750.800.8590.1490.1590.1690.1790.18Figure5:Typicaloptimizationsurfaceover (ct,µt)encounteredduringbackward
+recursion.
+Figure 6 presents the evolution of the six most important variables over time if the optimal strategy is
+used, based on 500,000 independently simulated trajectories. These six variables are the social cost of
+carbonSCCt, the global mean surface temperature TAT
+t, the carbon concentration in the atmosphere
+MAT
+t, the emission mitigation rate µt, total CO2emissionsEt, and damages π2×(TAT
+t)2. The panels
+include the median trajectory (bold solid line), expected trajectory (dash-dotted line), the 25 %and
+75%quantiles (dashed lines), the 10 %and 90 %quantiles (solid lines) as well as the range of sampling
+paths between the 1 %and 99 %quantiles (shaded area). We can observe a signiﬁcant amount of
+uncertainty in all variables. Most notably, a signiﬁcant fraction of scenarios sees full mitigation (i.e.
+µt= 1) well before the year 2100 in the optimal case, though the median trajectory is a bit below
+the full mitigation in 2100. We also observe that for temperature, the 1 %quantile is approximately
+at 2.5◦C, while the 99 %quantile is approximately at 4.5◦C. The SCC is about US$200 in 2100 under
+the median trajectory, and between $150 and $300 for the 10% and 90% quantiles. For all variables
+the median trajectory and deterministic DICE solution are virtually indistinguishable and very close
+to the expected trajectory.
+Figure 7 shows the ﬁrst- and total-order Sobol’ indices for various model outputs in relation to the 5
+sources of uncertainty which we considered in the model. The analyzed outputs are the social cost of
+carbon in 2020 (SCC), the mean surface temperature in the atmosphere in 2100 (TATM), the carbon
+concentration in the atmosphere in 2100 (MAT), output in 2100 (OUT), emissions in 2100 (EMI) as
+well as damages in 2100 (DAM). The ﬁrst-order Sobol’ indices (left panel) illustrate the individual
+contribution of each input to the variance of the outputs, while the total-order Sobol’ indices (right
+20
+
+
+1000120014001600Carbon concentration
+1234T emperature
+0.00.20.40.60.81.0Emission control rate
+0102030405060Emissions
+2020 2040 2060 2080 21000.000.010.020.030.040.050.06Damages
+2020 2040 2060 2080 21000100200300400500600Social cost of carbonFigure 6: Evolution of the six most important variables over time.
+panel) capture the overall contribution, including interactions with other inputs. Note that ﬁrst-order
+indices do not sum up to 100%, as we have not taken into account higher order indices (second order,
+third order etc.).
+From Figure 7, it is evident that output is predominantly impacted by total factor productivity, with
+both ﬁrst-order and total-order indices close to 100 %, indicating a strong direct inﬂuence. In contrast,
+the overall impact of the carbon intensity is negligible, with the indices being below 1 %throughout.
+Uncertainty in σtcould potentially be excluded to simplify the model without sacriﬁcing accuracy.
+The temperature-sensitivity and damage coeﬃcients exhibit high indices across all remaining outputs,
+implying their large inﬂuence on the model outputs. Both of these coeﬃcients moreover show a signif-
+icant diﬀerence between their ﬁrst-order and total-order indices for emissions, suggesting substantial
+interaction eﬀects with other inputs. Notably, the almost negligible ﬁrst- and total-order indices for
+the carbon cycle coeﬃcient with respect to emissions is contrasted by signiﬁcant indices for damages,
+as well as atmospheric temperatures and carbon concentrations. Finally, we observe that uncertainty
+in the social cost of carbon in 2020 is largely due to temperature-sensitivity and damage coeﬃcients.
+This does not come as a surprise, as the uncertainty in Atandσtpropagates through time and is
+therefore not very pronounced in the year 2020 (compared to, for instance, the year 2100).
+21
+
+
+Overall, Figure 7 highlights that:
+1. Productivity has a strong inﬂuence on output, but neither on damages nor on temperatures.
+2. The carbon intensity has a completely negligible impact on the model.
+3. The temperature-sensitivity and damage coeﬃcients have very strong impacts on the model.
+TFP SIG TSC DC CCSCC TAT MAT OUT EMI DAM0.0 0.0 36.7 55.1 2.5
+1.4 0.4 62.3 12.7 20.9
+1.6 0.9 31.2 36.2 26.1
+100.0 0.0 0.0 0.0 0.0
+3.9 0.4 40.0 43.5 1.5
+0.6 0.2 36.5 45.6 13.7
+TFP SIG TSC DC CCSCC TAT MAT OUT EMI DAM0.0 0.0 42.2 60.6 2.9
+2.2 0.4 64.2 14.3 21.4
+4.8 1.0 33.5 38.7 26.2
+100.0 0.0 0.0 0.0 0.0
+10.2 0.7 49.0 52.6 2.3
+0.9 0.2 38.5 48.0 15.9
+Figure 7: First-order (left) and total-order (right) Sobol’ indices for various
+model outputs with respect to uncertainty in total factor productivity (TFP),
+carbon intensity (SIG), temperature-sensitivity coeﬃcient (TSC), damage coef-
+ﬁcient (DC) and carbon cycle coeﬃcient (CC).
+Figure 8 shows the evolution of ﬁrst-order Sobol’ indices for our main variables over time, up to the
+year 2150. It highlights the fact that the impact of the uncertain variables on the outputs changes
+over time. Most notably, the changes appear not to follow a linear pattern, especially when looking at
+emissions. There, the impact of total factor productivity Atpeaks around the year 2035, but declines
+rapidly afterwards. In contrast, the impact of Aton the social cost of carbon gradually rises from 0 %
+in the year 2020, to around 25 %in the year 2150. This does not come as a surprise, as it highlights
+the eﬀect of the large initial uncertainty about parameters such as the temperature-sensitivity and
+damage coeﬃcients, which combines with a negligible initial uncertainty in total factor productivity
+that grows over time. Another interesting eﬀect that can be observed is that the total sum of all
+ﬁrst-order indices declines for emissions from above 95 %in the year 2020 to slightly below 40 %in
+the year 2150. This motivates the insight that the impact due to interactions between the uncertain
+variables grows over time.
+Table 2 shows the key statistics for the major variables. In terms of the coeﬃcient of variation (CV),
+we can observe the highest degree of uncertainty in emissions, followed by the social cost of carbon,
+damages, and output. Most importantly, the interquartile range (IQR) of 0.64◦C for temperature and
+1.4%for damages highlights the importance of considering the notable variations in projections due to
+thepresenceofuncertainty. Moreover, wecanre-conﬁrmthepresenceofnoticeablediﬀerencesbetween
+the mean, median and best guess values for some variables, which is in line with the observations of
+Nordhaus (2018). Diﬀerences between the mean and median values hint at the presence of skewness
+in the distribution of the variables, which can also be visually conﬁrmed from Figure 6. Finally,
+diﬀerences between the best guess estimates and the mean and median values show that in some
+cases, the best guess provides a reasonable approximation of the complex dynamics, whereas in other
+22
+
+
+0255075100SCC TAT
+0255075100MAT OUT
+2020 2040 2060 2080 2100 2120 21400255075100EMI
+2020 2040 2060 2080 2100 2120 2140DAMTFP SIG TSC DC CCFigure 8: First-order Sobol’ indices for main variables over time.
+cases it does not, which again highlights the importance of explicitly including stochastic dynamics
+into climate-economy models.
+Table 2: Statistics for major variables
+Variable Mean BG Median SD IQR CV
+Social cost of carbon, 2020 30.9 28.3 28.7 12.5 16.7 0.40
+Temperature, 2100 (◦C) 3.42 3.49 3.40 0.46 0.64 0.13
+Carbon concentration, 2100 (ppm) 1,342 1,344 1,339 156 217 0.12
+World output, 2100 (trillions, 2015 $) 833.6 795.9 811.2 203.6 271.9 0.24
+Emissions, 2100 14.0 13.1 12.0 13.3 23.6 0.95
+Damages, 2100 (percent output) 3.0 2.9 2.9 1.0 1.4 0.34
+SD, IQR and CV refer to standard deviation, interquartile range and coeﬃcient of variation, respec-
+tively. BG refers to best guess, which is the value calculated along the expected trajectory, assuming
+that uncertainties are set to their respective means.
+23
+
+
+5 Conclusions
+Climate-economy models are essential tools for informed decision-making, risk management, and
+strategic planning in the face of climate change. These models provide a structured framework for
+analyzing the economic implications of climate policies and developing sustainable solutions to mit-
+igate and adapt to climate change impacts. Incorporating stochastic models into climate-economy
+analyses is crucial for capturing the full spectrum of uncertainties, improving risk assessment, de-
+signing resilient policies, and enhancing the overall robustness and reliability of the models and their
+predictions. However, the complexity of capturing the intricate, multifaceted, and probabilistic nature
+of climate and economic systems, coupled with the computational challenges of handling large-scale,
+high-dimensional, and stochastic models, poses signiﬁcant challenges in deriving eﬃcient solutions in
+the presence of uncertainty.
+This paper presents an advanced approach to modeling recursive stochastic climate-economy models
+using a deep least-squares Monte Carlo (LSMC) method. The method’s ﬂexibility allows for the
+application to various types of uncertainties, including parametric and stochastic process uncertain-
+ties. The integration of deep neural networks enables the handling of high-dimensional models in
+a tractable manner and within a reasonable computational budget, thus making stochastic climate-
+economy models more accessible to researchers and policymakers. The methodology and ﬁndings
+presented here provide a solid foundation for future work in this vital area of research.
+Future research should explore the incorporation of Bayesian learning mechanisms to update prob-
+abilities as more information becomes available over time. Since our approach can manage high-
+dimensional stochastic shocks, a natural next step is to study the impact of multi-dimensional proba-
+bility distributions whose marginals are correlated. Additionally, we aim to apply our method to the
+study of climate tipping points as well as the Regional Integrated model of Climate Change and the
+Economy (RICE) of Nordhaus and Yang (1996). These future steps could further reﬁne the model’s
+predictions and enhance its policy relevance.
+It is important to note that IAMs, and the DICE model in particular, have limitations in the model
+structure and model parameters which are debated in the literature, see e.g. discussions in Pindyck
+(2017). The incorporation of uncertainties into these models is an important improvement. Our
+approach demonstrates signiﬁcant advancements in modeling and solving complex stochastic climate-
+economy models. By capturing a wide range of uncertainties and leveraging advanced computational
+techniques, we contribute to the development of more robust and reliable tools for climate policy anal-
+ysis. The continued evolution of these models will be critical in supporting eﬀective and sustainable
+climate action in the years to come, and the deep least-squares Monte Carlo method provides a useful
+tool to solve stochastic climate-economy models.
+Acknowledgements
+Aleksandar Arandjelović acknowledges support from the International Cotutelle Macquarie University
+Research Excellence Scholarship, as well as from the Institute of Statistical Mathematics, Japan. A
+24
+
+
+signiﬁcant part of work on this project was carried out while Aleksandar Arandjelović was aﬃliated
+with the research unit Financial and Actuarial Mathematics (FAM) at TU Wien in Vienna, Austria
+as well as the Department of Actuarial Studies and Business Analytics at Macquarie University in
+Sydney, Australia. Pavel Shevchenko and Tor Myrvoll acknowledge travel support from the Institute
+of Statistical Mathematics, Japan. This work was presented at the international workshop “Stochastic
+Modelling in Climate Risk” in November 2023 (ISM Japan), the international workshop “Advances
+in Risk Modelling and Applications to Finance and Climate Risk” in July 2024 (WU Wien, Austria),
+and at invited seminars at the University of New South Wales, the Australian National University,
+Vienna University of Technology and Mahidol University in 2024. The authors are grateful for the
+constructive comments received from participants of these events.
+References
+Frank Ackerman, Stephen J. DeCanio, Richard B. Howarth, and Kristen Sheeran. Limitations of
+integrated assessment models of climate change. Climatic Change , 95(3):297–315, 2009.
+René Aïd, Luciano Campi, Nicolas Langrené, and Huyên Pham. A probabilistic numerical method for
+optimal multiple switching problems in high dimension. SIAM Journal on Financial Mathematics ,
+5(1):191–231, 2014.
+JohanG.AndréassonandPavelV.Shevchenko. Abias-correctedleast-squaresMonteCarloforsolving
+multi-period utility models. European Actuarial Journal , 12(1):349–379, 2022.
+Johan G. Andréasson and Pavel V. Shevchenko. Optimal annuitisation, housing and reverse mortgage
+in retirement in the presence of a means-tested public pension. European Actuarial Journal , 2024.
+https://doi.org/10.1007/s13385-024-00379-3 .
+Denis Belomestny. Pricing Bermudan options by nonparametric regression: Optimal rates of conver-
+gence for lower estimates. Finance and Stochastics , 15:655–683, 2011.
+Denis Belomestny, Anastasia Kolodko, and John Schoenmakers. Regression methods for stochastic
+control problems and their convergence analysis. SIAM Journal on Control and Optimization , 48
+(5):3562–3588, 2010.
+Yongyang Cai and Thomas S. Lontzek. The social cost of carbon with economic and climate risks.
+Journal of Political Economy , 127(6):2684–2734, 2019.
+George Cybenko. Approximation by superpositions of a sigmoidal function. Mathematics of Control,
+Signals and Systems , 2(4):303–314, 1989.
+Aryeh Dvoretzky. On stochastic approximation. In Proceedings of the Third Berkeley Symposium on
+Mathematical Statistics and Probability, 1954–1955, vol. I , pages 39–55. University of California
+Press, Berkeley and Los Angeles, Calif., 1956.
+25
+
+
+W.H. Fleming and H.M. Soner. Controlled Markov Processes and Viscosity Solutions , volume 25 of
+Stochastic Modelling and Applied Probability . Springer, New York, second edition, 2006.
+Aleksandra Friedl, Felix Kübler, Simon Scheidegger, and Takafumi Usui. Deep uncertainty quantiﬁ-
+cation: With an application to integrated assessment models. Technical report, Working Paper
+University of Lausanne, 2023.
+Kenneth Gillingham, William D. Nordhaus, David Anthoﬀ, Geoﬀrey Blanford, Valentina Bosetti,
+Peter Christensen, Haewon McJeon, John Reilly, and Paul Sztorc. Modeling uncertainty in climate
+change: A multi-model comparison. Technical report, National Bureau of Economic Research,
+2015.
+Michael Grubb, Claudia Wieners, and Pu Yang. Modeling myths: On DICE and dynamic realism
+in integrated assessment models of climate change mitigation. Wiley Interdisciplinary Reviews:
+Climate Change , 12(3):e698, 2021.
+Kurt Hornik. Approximation capabilities of multilayer feedforward networks. Neural Networks , 4(2):
+251–257, 1991.
+Masako Ikefuji, Roger J. A. Laeven, Jan R. Magnus, and Chris Muris. Expected utility and catas-
+trophic risk in a stochastic economy-climate model. Journal of Econometrics , 214(1):110–129,
+2020.
+Interagency Working Group on Social Cost of Greenhouse Gases. Technical support document: Social
+cost of carbon for regulatory impact analysis under executive order 12866. Technical report, United
+States Government, 2016.
+Svenn Jensen and Christian P. Traeger. Optimal climate change mitigation under long-term growth
+uncertainty: Stochastic integrated assessment and analytic ﬁndings. European Economic Review ,
+69:104–125, 2014.
+DavidL.KellyandCharlesD.Kolstad. Bayesianlearning, growth, andpollution. Journal of Economic
+Dynamics and Control , 23(4):491–518, 1999.
+David L. Kelly and Charles D. Kolstad. Solving inﬁnite horizon growth models with an environmental
+sector.Computational Economics , 18:217–231, 2001.
+Idris Kharroubi, Nicolas Langrené, and Huyên Pham. A numerical algorithm for fully nonlinear HJB
+equations: An approach by control randomization. Monte Carlo Methods and Applications , 20(2):
+145–165, 2014.
+Jack Kiefer and Jacob Wolfowitz. Stochastic estimation of the maximum of a regression function.
+Annals of Mathematical Statistics , 23(3):462–466, 1952.
+Anastasis Kratsios. The universal approximation property: Characterization, construction, represen-
+tation, and existence. Annals of Mathematics and Artiﬁcial Intelligence , 89(5):435–469, 2021.
+26
+
+
+Andrew J. Leach. The climate change learning curve. Journal of Economic Dynamics and Control ,
+31(5):1728–1752, 2007.
+Francis A. Longstaﬀ and Eduardo S. Schwartz. Valuing American options by simulation: A simple
+least-squares approach. The Review of Financial Studies , 14(1):113–147, 2001.
+Thomas S. Lontzek, Yongyang Cai, Kenneth L. Judd, and Timothy M. Lenton. Stochastic integrated
+assessment of climate tipping points indicates the need for strict climate policy. Nature Climate
+Change, 5(5):441–444, 2015.
+WilliamD.Nordhaus. Projectionsanduncertaintiesaboutclimatechangeinaneraofminimalclimate
+policies. American Economic Journal: Economic Policy , 10(3):333–360, 2018.
+William D. Nordhaus and Zili Yang. A regional dynamic general-equilibrium model of alternative
+climate-change strategies. The American Economic Review , 86(4):741–765, 1996.
+William D. Nordhaus et al. The ‘DICE’ model: background and structure of a dynamic integrated
+climate-economy model of the economics of global warming. Technical report, Cowles Foundation
+for Research in Economics, Yale University, 1992.
+Robert S. Pindyck. The use and misuse of models for climate policy. Review of Environmental
+Economics and Policy , 11:100–114, 2017.
+Herbert Robbins and Sutton Monro. A stochastic approximation method. Annals of Mathematical
+Statistics , 22(3):400–407, 1951.
+D. E. Rumelhart, G. E. Hinton, and R. J. Williams. Learning representations by back-propagating
+errors.Nature, 323(6088):533–536, 1986.
+Pavel V. Shevchenko, Daisuke Murakami, Tomoko Matsui, and Tor A. Myrvoll. Impact of COVID-
+19 type events on the economy and climate under the stochastic DICE model. Environmental
+Economics and Policy Studies , 24:459–476, 2022.
+Ilya M. Sobol’. On the distribution of points in a cube and the approximate evaluation of integrals.
+USSR Computational Mathematics and Mathematical Physics , 7(4):86–112, 1967.
+Ilya M. Sobol’. Global sensitivity indices for nonlinear mathematical models and their Monte Carlo
+estimates. Mathematics and Computers in Simulation , 55(1–3):271–280, 2001.
+Christian P. Traeger. A 4-stated DICE: Quantitatively addressing uncertainty eﬀects in climate
+change.Environmental and Resource Economics , 59(1):1–37, 2014.
+John N. Tsitsiklis and Benjamin Van Roy. Regression methods for pricing complex American-style
+options. IEEE Transactions on Neural Networks , 12(4):694–703, 2001.
+Martin L. Weitzman. Fat-tailed uncertainty in the economics of catastrophic climate change. Review
+of Environmental Economics and Policy , 5(2):275–292, 2011.
+27
