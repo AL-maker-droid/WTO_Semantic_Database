@@ -150,4 +150,22 @@ pass
 ## License
 MIT License
 
+## References 
+@inproceedings{chalkidis-etal-2020-legal,
+    title = "{LEGAL}-{BERT}: The Muppets straight out of Law School",
+    author = "Chalkidis, Ilias  and
+      Fergadiotis, Manos  and
+      Malakasiotis, Prodromos  and
+      Aletras, Nikolaos  and
+      Androutsopoulos, Ion",
+    booktitle = "Findings of the Association for Computational Linguistics: EMNLP 2020",
+    month = nov,
+    year = "2020",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    doi = "10.18653/v1/2020.findings-emnlp.261",
+    pages = "2898--2904"
+}
+
+
 
